@@ -1,205 +1,303 @@
 import {ReactElement} from "react";
-import {StageBase, StageResponse, InitialData, Message} from "@chub-ai/stages-ts";
+import {StageBase, StageResponse, InitialData, Message, Character, User} from "@chub-ai/stages-ts";
 import {LoadResponse} from "@chub-ai/stages-ts/dist/types/load";
+import {Action} from "./Action";
+import {Stat} from "./Stat"
+import {Outcome, Result, ResultDescription} from "./Outcome";
+import {env, pipeline} from '@xenova/transformers';
+import {Client} from "@gradio/client";
 
-/***
- The type that this stage persists message-level state in.
- This is primarily for readability, and not enforced.
-
- @description This type is saved in the database after each message,
-  which makes it ideal for storing things like positions and statuses,
-  but not for things like history, which is best managed ephemerally
-  in the internal state of the Stage class itself.
- ***/
 type MessageStateType = any;
 
-/***
- The type of the stage-specific configuration of this stage.
-
- @description This is for things you want people to be able to configure,
-  like background color.
- ***/
 type ConfigType = any;
 
-/***
- The type that this stage persists chat initialization state in.
- If there is any 'constant once initialized' static state unique to a chat,
- like procedurally generated terrain that is only created ONCE and ONLY ONCE per chat,
- it belongs here.
- ***/
 type InitStateType = any;
 
-/***
- The type that this stage persists dynamic chat-level state in.
- This is for any state information unique to a chat,
-    that applies to ALL branches and paths such as clearing fog-of-war.
- It is usually unlikely you will need this, and if it is used for message-level
-    data like player health then it will enter an inconsistent state whenever
-    they change branches or jump nodes. Use MessageStateType for that.
- ***/
 type ChatStateType = any;
 
-/***
- A simple example class that implements the interfaces necessary for a Stage.
- If you want to rename it, be sure to modify App.js as well.
- @link https://github.com/CharHubAI/chub-stages-ts/blob/main/src/types/stage.ts
- ***/
-export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateType, ConfigType> {
+/*
+  nvm use 21.7.1
+  yarn install (if dependencies have changed)
+  yarn dev --host --mode staging
+*/
 
-    /***
-     A very simple example internal state. Can be anything.
-     This is ephemeral in the sense that it isn't persisted to a database,
-     but exists as long as the instance does, i.e., the chat page is open.
-     ***/
-    myInternalState: {[key: string]: any};
+export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateType, ConfigType> {
+    
+    readonly defaultStat: number = 0;
+    readonly levelThresholds: number[] = [2, 5, 8, 12, 16, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100];
+
+    // message-level variables
+    experience: number = 0;
+    statUses: {[stat in Stat]: number} = this.clearStatMap();
+    stats: {[stat in Stat]: number} = this.clearStatMap();
+    lastOutcome: Outcome|null = null;
+    lastOutcomePrompt: string = '';
+
+    // other
+    client: any;
+    fallbackPipelinePromise: Promise<any> | null = null;
+    fallbackPipeline: any = null;
+    fallbackMode: boolean;
+    player: User;
+    characters: {[key: string]: Character};
 
     constructor(data: InitialData<InitStateType, ChatStateType, MessageStateType, ConfigType>) {
-        /***
-         This is the first thing called in the stage,
-         to create an instance of it.
-         The definition of InitialData is at @link https://github.com/CharHubAI/chub-stages-ts/blob/main/src/types/initial.ts
-         Character at @link https://github.com/CharHubAI/chub-stages-ts/blob/main/src/types/character.ts
-         User at @link https://github.com/CharHubAI/chub-stages-ts/blob/main/src/types/user.ts
-         ***/
         super(data);
         const {
-            characters,         // @type:  { [key: string]: Character }
-            users,                  // @type:  { [key: string]: User}
-            config,                                 //  @type:  ConfigType
-            messageState,                           //  @type:  MessageStateType
-            environment,                     // @type: Environment (which is a string)
-            initState,                             // @type: null | InitStateType
-            chatState                              // @type: null | ChatStateType
+            characters,
+            users,
+            messageState,
         } = data;
-        this.myInternalState = messageState != null ? messageState : {'someKey': 'someValue'};
-        this.myInternalState['numUsers'] = Object.keys(users).length;
-        this.myInternalState['numChars'] = Object.keys(characters).length;
+        this.setStateFromMessageState(messageState);
+        this.player = users[Object.keys(users)[0]];
+        this.characters = characters;
+
+        this.fallbackMode = false;
+        this.fallbackPipeline = null;
+        env.allowRemoteModels = false;
+    }
+
+    clearStatMap() {
+        return {
+            [Stat.Might]: 0,
+            [Stat.Grace]: 0,
+            [Stat.Skill]: 0,
+            [Stat.Brains]: 0,
+            [Stat.Wits]: 0,
+            [Stat.Charm]: 0,
+            [Stat.Heart]: 0,
+            [Stat.Luck]: 0
+        };
     }
 
     async load(): Promise<Partial<LoadResponse<InitStateType, ChatStateType, MessageStateType>>> {
-        /***
-         This is called immediately after the constructor, in case there is some asynchronous code you need to
-         run on instantiation.
-         ***/
+
+        try {
+            this.fallbackPipelinePromise = this.getPipeline();
+        } catch (exception: any) {
+            console.error(`Error loading pipeline: ${exception}`);
+        }
+
+        try {
+            this.client = await Client.connect("Ravenok/statosphere-backend", {hf_token: import.meta.env.VITE_HF_API_KEY});
+        } catch (error) {
+            console.error(`Error connecting to backend pipeline; will resort to local inference.`);
+            this.fallbackMode = true;
+        }
+
+        console.log('Finished loading stage.');
+
         return {
-            /*** @type boolean @default null
-             @description The 'success' boolean returned should be false IFF (if and only if), some condition is met that means
-              the stage shouldn't be run at all and the iFrame can be closed/removed.
-              For example, if a stage displays expressions and no characters have an expression pack,
-              there is no reason to run the stage, so it would return false here. ***/
             success: true,
-            /*** @type null | string @description an error message to show
-             briefly at the top of the screen, if any. ***/
             error: null,
             initState: null,
             chatState: null,
         };
     }
 
+    async getPipeline() {
+        return pipeline("zero-shot-classification", "Xenova/mobilebert-uncased-mnli");
+    }
+
     async setState(state: MessageStateType): Promise<void> {
-        /***
-         This can be called at any time, typically after a jump to a different place in the chat tree
-         or a swipe. Note how neither InitState nor ChatState are given here. They are not for
-         state that is affected by swiping.
-         ***/
-        if (state != null) {
-            this.myInternalState = {...this.myInternalState, ...state};
-        }
+        this.setStateFromMessageState(state);
     }
 
     async beforePrompt(userMessage: Message): Promise<Partial<StageResponse<ChatStateType, MessageStateType>>> {
-        /***
-         This is called after someone presses 'send', but before anything is sent to the LLM.
-         ***/
         const {
-            content,            /*** @type: string
-             @description Just the last message about to be sent. ***/
-            anonymizedId,       /*** @type: string
-             @description An anonymized ID that is unique to this individual
-              in this chat, but NOT their Chub ID. ***/
-            isBot             /*** @type: boolean
-             @description Whether this is itself from another bot, ex. in a group chat. ***/
+            content,
+            promptForId
         } = userMessage;
+
+        let errorMessage: string|null = null;
+        let takenAction: Action|null = null;
+        let finalContent: string|undefined = content;
+
+        if (finalContent) {
+            let sequence = this.replaceTags(content,
+                {"user": this.player.name, "char": promptForId ? this.characters[promptForId].name : ''});
+
+            const statMapping:{[key: string]: string} = {
+                'hit, wrestle': 'Might',
+                'lift, throw, climb': 'Might',
+                'endure, intimidate': 'Might',
+                'jump, dodge, balance, dance, fall, land, sneak': 'Grace',
+                'aim, shoot': 'Skill',
+                'craft, lock-pick, pickpocket, repair': 'Skill',
+                'recall, memorize, solve, strategize, debate': 'Brains',
+                'adapt, quip, spot, trick, hide': 'Wits',
+                'persuade, lie, entice, perform': 'Charm',
+                'resist, recover, empathize, comfort': 'Heart',
+                'gamble, hope, discover, guess': 'Luck',
+                'chat, rest, wait, idle': 'None'};
+            let topStat: Stat|null = null;
+            const statHypothesis = 'The narrator is attempting to do one of the following: {}, or something similar.'
+            const statPromise = this.query({sequence: sequence, candidate_labels: Object.keys(statMapping), hypothesis_template: statHypothesis, multi_label: true });
+
+            const difficultyMapping:{[key: string]: number} = {
+                '1 (simple and safe)': 1000,
+                '2 (straightforward or fiddly)': 1,
+                '3 (complex or tricky)': 0,
+                '4 (challenging and risky)': -1,
+                '5 (arduous and dangerous)': -2,
+                '6 (virtually impossible)': -3};
+            let difficultyRating:number = 0;
+            const difficultyHypothesis = 'On a scale of 1-6, the difficulty of the narrator\'s actions is {}.';
+            let difficultyResponse = await this.query({sequence: sequence, candidate_labels: Object.keys(difficultyMapping), hypothesis_template: difficultyHypothesis, multi_label: true });
+            console.log(`Difficulty modifier selected: ${difficultyMapping[difficultyResponse.labels[0]]}`);
+            if (difficultyResponse && difficultyResponse.labels[0]) {
+                difficultyRating = difficultyMapping[difficultyResponse.labels[0]];
+            }
+
+            let statResponse = await statPromise;
+            console.log(`Stat selected: ${(statResponse.scores[0] > 0.3 ? statMapping[statResponse.labels[0]] : 'None')}`);
+            if (statResponse && statResponse.labels && statResponse.scores[0] > 0.3 && statMapping[statResponse.labels[0]] != 'None') {
+                topStat = Stat[statMapping[statResponse.labels[0]] as keyof typeof Stat];
+            }
+
+            if (topStat && difficultyRating < 1000) {
+                takenAction = new Action(finalContent, topStat, difficultyRating, this.stats[topStat]);
+            } else {
+                takenAction = new Action(finalContent, null, 0, 0);
+            }
+        }
+
+        if (takenAction) {
+            this.setLastOutcome(takenAction.determineSuccess());
+            finalContent = this.lastOutcome?.getDescription();
+
+            if (takenAction.stat) {
+                this.statUses[takenAction.stat]++;
+            }
+
+            if (this.lastOutcome && [Result.Failure, Result.CriticalSuccess].includes(this.lastOutcome.result)) {
+                this.experience++;
+                let level = this.getLevel();
+                if (this.experience == this.levelThresholds[level]) {
+                    const maxCount = Math.max(...Object.values(this.statUses));
+                    const maxStats = Object.keys(this.statUses)
+                            .filter((stat) => this.statUses[stat as Stat] === maxCount)
+                            .map((stat) => stat as Stat);
+                    let chosenStat = maxStats[Math.floor(Math.random() * maxStats.length)];
+                    this.stats[chosenStat]++;
+
+                    finalContent += `\n##Welcome to level ${level + 2}!##\n#_${chosenStat}_ up!#`;
+
+                    this.statUses = this.clearStatMap();
+                } else {
+                    finalContent += `\n###You've learned from this experience...###`
+                }
+            }
+        }
+
         return {
-            /*** @type null | string @description A string to add to the
-             end of the final prompt sent to the LLM,
-             but that isn't persisted. ***/
-            stageDirections: null,
-            /*** @type MessageStateType | null @description the new state after the userMessage. ***/
-            messageState: {'someKey': this.myInternalState['someKey']},
-            /*** @type null | string @description If not null, the user's message itself is replaced
-             with this value, both in what's sent to the LLM and in the database. ***/
-            modifiedMessage: null,
-            /*** @type null | string @description A system message to append to the end of this message.
-             This is unique in that it shows up in the chat log and is sent to the LLM in subsequent messages,
-             but it's shown as coming from a system user and not any member of the chat. If you have things like
-             computed stat blocks that you want to show in the log, but don't want the LLM to start trying to
-             mimic/output them, they belong here. ***/
+            stageDirections: `\n[INST]${this.replaceTags(this.lastOutcomePrompt,{
+                "user": this.player.name,
+                "char": promptForId ? this.characters[promptForId].name : ''
+            })}\n[/INST]`,
+            messageState: this.buildMessageState(),
+            modifiedMessage: finalContent,
             systemMessage: null,
-            /*** @type null | string @description an error message to show
-             briefly at the top of the screen, if any. ***/
-            error: null,
+            error: errorMessage,
             chatState: null,
         };
     }
 
+    getLevel(): number {
+        return Object.values(this.stats).reduce((acc, val) => acc + val, 0)
+    }
     async afterResponse(botMessage: Message): Promise<Partial<StageResponse<ChatStateType, MessageStateType>>> {
-        /***
-         This is called immediately after a response from the LLM.
-         ***/
-        const {
-            content,            /*** @type: string
-             @description The LLM's response. ***/
-            anonymizedId,       /*** @type: string
-             @description An anonymized ID that is unique to this individual
-              in this chat, but NOT their Chub ID. ***/
-            isBot             /*** @type: boolean
-             @description Whether this is from a bot, conceivably always true. ***/
-        } = botMessage;
+
+        this.lastOutcomePrompt = '';
+
         return {
-            /*** @type null | string @description A string to add to the
-             end of the final prompt sent to the LLM,
-             but that isn't persisted. ***/
             stageDirections: null,
-            /*** @type MessageStateType | null @description the new state after the botMessage. ***/
-            messageState: {'someKey': this.myInternalState['someKey']},
-            /*** @type null | string @description If not null, the bot's response itself is replaced
-             with this value, both in what's sent to the LLM subsequently and in the database. ***/
+            messageState: this.buildMessageState(),
             modifiedMessage: null,
-            /*** @type null | string @description an error message to show
-             briefly at the top of the screen, if any. ***/
             error: null,
-            systemMessage: null,
+            systemMessage: `---\n` +
+                `\`{{user}} - Level ${this.getLevel() + 1} (${this.experience}/${this.levelThresholds[this.getLevel()]})\`<br>` +
+                `\`${Object.keys(Stat).map(key => `${key}: ${this.stats[key as Stat]}`).join(' | ')}\``,
             chatState: null
         };
     }
 
+    setStateFromMessageState(messageState: MessageStateType) {
+        this.stats = this.clearStatMap();
+        if (messageState != null) {
+            for (let stat in Stat) {
+                this.stats[stat as Stat] = messageState[stat] ?? this.defaultStat;
+                this.statUses[stat as Stat] = messageState[`use_${stat}`] ?? 0;
+            }
+            this.lastOutcome = messageState['lastOutcome'] ? this.convertOutcome(messageState['lastOutcome']) : null;
+            this.lastOutcomePrompt = messageState['lastOutcomePrompt'] ?? '';
+            this.experience = messageState['experience'] ?? 0;
+        }
+    }
+
+    convertOutcome(input: any): Outcome {
+        return new Outcome(input['dieResult1'], input['dieResult2'], this.convertAction(input['action']));
+    }
+
+    convertAction(input: any): Action {
+        return new Action(input['description'], input['stat'] as Stat, input['difficultyModifier'], input['skillModifier'])
+    }
+
+    buildMessageState(): any {
+        let messageState: {[key: string]: any} = {};
+        for (let stat in Stat) {
+            messageState[stat] = this.stats[stat as Stat] ?? this.defaultStat;
+            messageState[`use_${stat}`] = this.statUses[stat as Stat] ?? 0;
+        }
+        messageState['lastOutcome'] = this.lastOutcome ?? null;
+        messageState['lastOutcomePrompt'] = this.lastOutcomePrompt ?? '';
+        messageState['experience'] = this.experience ?? 0;
+
+        return messageState;
+    }
+
+    setLastOutcome(outcome: Outcome|null) {
+        this.lastOutcome = outcome;
+        this.lastOutcomePrompt = '';
+        if (this.lastOutcome) {
+            this.lastOutcomePrompt += `{{user}} has chosen the following action: ${this.lastOutcome.action.description}\n`;
+            this.lastOutcomePrompt += `${ResultDescription[this.lastOutcome.result]}\n`
+        }
+    }
+
+    replaceTags(source: string, replacements: {[name: string]: string}) {
+        return source.replace(/{{([A-z]*)}}/g, (match) => {
+            return replacements[match.substring(2, match.length - 2)];
+        });
+    }
+
+    async query(data: any) {
+        let result: any = null;
+        if (this.client && !this.fallbackMode) {
+            try {
+                const response = await this.client.predict("/predict", {data_string: JSON.stringify(data)});
+                result = JSON.parse(`${response.data[0]}`);
+            } catch(e) {
+                console.log(e);
+            }
+        }
+        if (!result) {
+            if (!this.fallbackMode) {
+                console.log('Falling back to local zero-shot pipeline.');
+                this.fallbackMode = true;
+                Client.connect("Ravenok/statosphere-backend", {hf_token: import.meta.env.VITE_HF_API_KEY}).then(client => {this.fallbackMode = false; this.client = client}).catch(err => console.log(err));
+            }
+            if (this.fallbackPipeline == null) {
+                this.fallbackPipeline = this.fallbackPipelinePromise ? await this.fallbackPipelinePromise : await this.getPipeline();
+            }
+            result = await this.fallbackPipeline(data.sequence, data.candidate_labels, { hypothesis_template: data.hypothesis_template, multi_label: data.multi_label });
+        }
+        console.log({sequence: data.sequence, hypothesisTemplate: data.hypothesis_template, labels: result.labels, scores: result.scores});
+        return result;
+    }
 
     render(): ReactElement {
-        /***
-         There should be no "work" done here. Just returning the React element to display.
-         If you're unfamiliar with React and prefer video, I've heard good things about
-         @link https://scrimba.com/learn/learnreact but haven't personally watched/used it.
-
-         For creating 3D and game components, react-three-fiber
-           @link https://docs.pmnd.rs/react-three-fiber/getting-started/introduction
-           and the associated ecosystem of libraries are quite good and intuitive.
-
-         Cuberun is a good example of a game built with them.
-           @link https://github.com/akarlsten/cuberun (Source)
-           @link https://cuberun.adamkarlsten.com/ (Demo)
-         ***/
-        return <div style={{
-            width: '100vw',
-            height: '100vh',
-            display: 'grid',
-            alignItems: 'stretch'
-        }}>
-            <div>Hello World! I'm an empty stage! With {this.myInternalState['someKey']}!</div>
-            <div>There is/are/were {this.myInternalState['numChars']} character(s)
-                and {this.myInternalState['numUsers']} human(s) here.
-            </div>
-        </div>;
+        return <></>;
     }
 
 }
