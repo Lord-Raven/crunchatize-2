@@ -36,10 +36,10 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     stats: {[stat in Stat]: number} = this.clearStatMap();
     lastOutcome: Outcome|null = null;
     lastOutcomePrompt: string = '';
-    statBlockPrompt: () => string = () => {return `Narrate organically, but end the response with a Health stat and inventory list that iterates upon the current display to reflect up-to-date changes to {{user}}'s state and items based on their input and this response. Items are listed in this format: Name (Stat +/-Bonus)\n` +
+    statBlockPrompt: () => string = () => {return `After narration, close the response with a specifically formatted stat and inventory to reflect up-to-date changes to {{user}}'s state and items based on input and this response.\n` +
             `Example:\n---\nHealth: 8/10\nSword (Might +2) Spellbook (Brains +1) Pocket Lint (Luck +1)\n---\n` +
             `Example:\n---\nHealth: 2/10\nTrusty Rifle (Skill +1) Fancy Shoes (Grace +2)\n---\n` +
-            `This is the current display--iterate and update this as needed:\n---\nHealth: ${this.health}/${this.maxHealth}\n${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : 'Empty'}\n---`};
+            `Current display to update as needed:\n---\nHealth: ${this.health}/${this.maxHealth}\n${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : 'Empty'}\n---`};
 
     // other
     client: any;
