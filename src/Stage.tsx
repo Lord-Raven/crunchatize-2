@@ -37,7 +37,8 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     lastOutcome: Outcome|null = null;
     lastOutcomePrompt: string = '';
     statBlockPrompt: () => string = () => {return `End the response with a health stat and inventory list that reflects up-to-date changes to {{user}}'s state and items. Items should be listed in this format: Name (Stat +/- Bonus)\n` +
-            `Current:\n---\nHealth: ${this.health}/${this.maxHealth}\n${this.inventory.map(item => item.print()).join(' ')}\n---`};
+            `Example:\n---\nHealth: 8/10\nSword (Might +2) Spellbook (Brains +1) Pocket Lint (Luck +1)\n---` +
+            `This is the current display to be updated (if needed):\n---\nHealth: ${this.health}/${this.maxHealth}\n${this.inventory.map(item => item.print()).join(' ')}\n---`};
 
     // other
     client: any;
@@ -233,12 +234,15 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             if (healthMatch) {
                 this.health = parseInt(healthMatch[1], 10);
                 this.maxHealth = parseInt(healthMatch[2], 10);
+                console.log(`Read health: ${this.health}/${this.maxHealth}`);
             }
 
             // Extract items
             this.inventory = []
             const itemMatches = statBlock.match(/(\w+)\s+\((\w+)\s+\+\s+(\d+)\)/g);
             if (itemMatches) {
+                console.log('Found some itemMatches: ');
+                console.log(itemMatches);
                 itemMatches.forEach(itemStr => {
                     const itemMatch = itemStr.match(/(\w+)\s+\((\w+)\s+\+\s+(\d+)\)/);
                     if (itemMatch) {
@@ -246,7 +250,10 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
                         const stat = findMostSimilarStat(itemMatch[2]);
                         const bonus = parseInt(itemMatch[3], 10);
                         if (name && stat && bonus) {
+                            console.log(`New item: ${name}, ${stat}, ${bonus}`);
                             this.inventory.push(new Item(name, stat, bonus));
+                        } else {
+                            console.log('Failed to parse an item');
                         }
                     }
                 });
