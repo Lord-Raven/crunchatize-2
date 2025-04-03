@@ -228,46 +228,40 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         } = botMessage;
 
         let statBlock = '';
+        
 
-        const matches = content.match(/---|\*\*\*/g);
-        if (matches && matches.length >= 2) {
-            const secondToLastIndex = content.lastIndexOf(matches[matches.length - 2]);
-            const lastIndex = content.lastIndexOf(matches[matches.length - 1]);
-            statBlock = content.substring(secondToLastIndex + matches[matches.length - 2].length, lastIndex).trim();
-            // Parse stat block for health and inventory.
-            
-            // Extract health information
-            const healthMatch = statBlock.match(/Health\s+(\d+)\/(\d+)/);
-            if (healthMatch) {
-                this.health = parseInt(healthMatch[1], 10);
-                this.maxHealth = parseInt(healthMatch[2], 10);
-                console.log(`Read health: ${this.health}/${this.maxHealth}`);
+        const statBlockPattern = /---\n(?:Health:\s*(\d+)\/(\d+)\n)?((?:\w+\s*\(\w+\s*[+-]\d+\)\s*)*)/;
+        const match = content.match(statBlockPattern);
+        
+        if (match) {
+            console.log(`Found a stat block: ${match}`);
+            if (match[1] && match[2]) {
+                console.log('Found some health');
+                this.health = parseInt(match[1]);
+                this.maxHealth = parseInt(match[2]);
             }
-
-            // Extract items
-            this.inventory = []
-            const itemMatches = statBlock.match(/(\w+)\s+\((\w+)\s+\+\s+(\d+)\)/g);
-            if (itemMatches) {
-                console.log('Found some itemMatches: ');
-                console.log(itemMatches);
-                itemMatches.forEach(itemStr => {
-                    const itemMatch = itemStr.match(/(\w+)\s+\((\w+)\s+\+\s+(\d+)\)/);
-                    if (itemMatch) {
-                        const name = itemMatch[1];
-                        const stat = findMostSimilarStat(itemMatch[2]);
-                        const bonus = parseInt(itemMatch[3], 10);
-                        if (name && stat && bonus) {
-                            console.log(`New item: ${name}, ${stat}, ${bonus}`);
-                            this.inventory.push(new Item(name, stat, bonus));
-                        } else {
-                            console.log('Failed to parse an item');
-                        }
+            if (match[3]) {
+                console.log('Found some inventory');
+                this.inventory = [];
+                const itemsText = match[3] || '';
+                const itemPattern = /(\w+)\s*\((\w+)\s*([+-]\d+)\)/g;
+                let itemMatch;
+            
+                while ((itemMatch = itemPattern.exec(itemsText)) !== null) {
+                    const name = itemMatch[1];
+                    const stat = findMostSimilarStat(itemMatch[2]);
+                    const bonus = parseInt(itemMatch[3], 10);
+                    if (name && stat && bonus) {
+                        console.log(`New item: ${name}, ${stat}, ${bonus}`);
+                        this.inventory.push(new Item(name, stat, bonus));
+                    } else {
+                        console.log('Failed to parse an item');
                     }
-                });
+                }
             }
 
             // Remove stat block from original content.
-            content = content.substring(0, secondToLastIndex).trim();
+            content = content.replace(statBlockPattern, '').trim();
         }
     
 
