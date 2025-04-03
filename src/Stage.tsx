@@ -36,10 +36,13 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     stats: {[stat in Stat]: number} = this.clearStatMap();
     lastOutcome: Outcome|null = null;
     lastOutcomePrompt: string = '';
-    statBlockPrompt: () => string = () => {return `After narration, always close the response with a formatted stat and inventory to convey up-to-date changes to {{user}}'s health and items based on events in the input and response.\n` +
-            `Formatting example:\n---\nHealth: 8/10\nSword (Might +2) Spellbook (Brains +1) Pocket Lint (Luck +1)\n---\n` +
-            `Formatting example:\n---\nHealth: 2/10\nTrusty Rifle (Skill +1) Fancy Shoes (Grace +2)\n---\n` +
-            `Current display to update as needed:\n---\nHealth: ${this.health}/${this.maxHealth}\n${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : 'Empty'}\n---`};
+    statExample: string = '[EXAMPLE STATBLOCK]\n' +
+            `---\nHealth: 8/10\nSword (Might +2) Spellbook (Brains +1) Pocket Lint (Luck +1)\n---\n` +
+            `---\nHealth: 2/10\nTrusty Rifle (Skill +1) Fancy Shoes (Grace +2)\n---\n` +
+            '[/EXAMPLE STATBLOCK]'
+    buildResponsePrompt: (instruction: string) => string = (instruction: string) => {return `${this.statExample}\n[CURRENT STATBLOCK]\n---\nHealth: ${this.health}/${this.maxHealth}\n${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : 'Empty'}\n---` +
+        `[RESPONSE INSTRUCTION]${instruction}\nAfter narration, end the response with a revised version of CURRENT STATBLOCK, updating it to convey changes to {{user}}'s health and items based on events in the input and response.\n[/RESPONSE INSTRUCTION]`}
+            
 
     // other
     client: any;
@@ -199,10 +202,10 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         }
 
         return {
-            stageDirections: `\n[INST]${this.replaceTags(`${this.lastOutcomePrompt}\n${this.statBlockPrompt()}`,{
+            stageDirections: `\n${this.replaceTags(this.buildResponsePrompt(this.lastOutcomePrompt),{
                 "user": this.player.name,
                 "char": promptForId ? this.characters[promptForId].name : ''
-            })}\n[/INST]`,
+            })}\n`,
             messageState: this.buildMessageState(),
             modifiedMessage: finalContent,
             systemMessage: null,
