@@ -263,7 +263,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             }
 
             // Remove stat block from original content.
-            content = content.substring(0, (match.index ?? 4) - 4).trim();
+            content = content.substring(0, content.indexOf("---")).trim();
         }
     
 
