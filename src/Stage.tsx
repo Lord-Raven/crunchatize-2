@@ -300,7 +300,6 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             for (let item of messageState['inventory'] ?? []) {
                 this.inventory.push(new Item(item.name, item.stat, item.bonus));
             }
-            this.inventory = messageState['inventory'] ?? [];
         }
     }
 
