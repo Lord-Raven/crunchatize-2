@@ -236,7 +236,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         let statBlock = '';
         
 
-        const statBlockPattern = /(Health:\s*(\d+)\/(\d+))?((?:[\w\s-]+\s*\(\w+\s*[+-]\d+\)\s*)*)/;
+        const statBlockPattern = /(Health:\s*(\d+)\/(\d+))((?:[\w\s-]+\s*\(\w+\s*[+-]\d+\)\s*)*)/;
         const match = content.match(statBlockPattern);
         
         if (match) {
@@ -267,7 +267,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             }
 
             // Remove stat block from original content.
-            content = content.substring(0, content.indexOf("---")).trim();
+            content = content.substring(0, content.indexOf("\n---")).trim();
         }
     
 
