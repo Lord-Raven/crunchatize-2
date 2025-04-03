@@ -38,11 +38,11 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     lastOutcomePrompt: string = '';
     statExample: string = '###EXAMPLE STATBLOCK:\n' +
             `---\nHealth: 8/10\nSword (Might +2) Spellbook (Brains +1) Pocket Lint (Luck +1)\n---\n\n` +
-            '\n###EXAMPLE STATBLOCK:\n' +
+            '###EXAMPLE STATBLOCK:\n' +
             `---\nHealth: 2/10\nTrusty Rifle (Skill +1) Fancy Shoes (Grace +2)\n---`;
     buildResponsePrompt: (instruction: string) => string = (instruction: string) => {return `${this.statExample}\n\n` +
-        `###CURRENT INSTRUCTION:\nThis response has two critical goals. First, narrate one or two paragraphs describing {{user}}'s actions and the reactions of the world around them. Second, end the response by outputting a formatted and updated statblock.\n` +
-        `${instruction}\nEnd the response with a revised version of CURRENT STATBLOCK, updating it to convey changes to {{user}}'s health and items based on events in the input and response.\n\n` +
+        `###CURRENT INSTRUCTION:\nThis response has two critical goals. First, narrate one or two paragraphs describing {{user}}'s actions and the reactions of the world around them. Second, end the response by outputting a formatted and updated statblock.\n\n` +
+        `${instruction}\nRemember to end the response with a revised version of CURRENT STATBLOCK, making updates as-needed to convey changes to {{user}}'s health and items based on events in the input and response.\n\n` +
         `###CURRENT STATBLOCK:\n---\nHealth: ${this.health}/${this.maxHealth}\n${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : ''}\n---\n`
     }
             
