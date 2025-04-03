@@ -44,7 +44,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             `---\nHealth: 3/10\nSword (Might +2) A Grotesque Scar (Charm -2) Pocket Lint (Luck +1)\n---`;
     buildResponsePrompt: (instruction: string) => string = (instruction: string) => {return `${this.statExample}\n\n` +
         `###CURRENT INSTRUCTION:\nThis response has two critical goals: first, narrate no more than one or two paragraphs describing {{user}}'s actions and the reactions of the world around them; second, end the response by outputting a formatted statblock.\n\n` +
-        `${instruction}\nEnd the response by outputting the CURRENT STATBLOCK below, making logical updates as-needed to convey changes to {{user}}'s health, equipment, and modifiers based on recent activity.\n\n` +
+        `${instruction}\nEnd the response by simply including the CURRENT STATBLOCK below, making logical updates as-needed to convey changes to {{user}}'s health, equipment, and modifiers based on recent activity.\n\n` +
         `###CURRENT STATBLOCK:\n---\nHealth: ${this.health}/${this.maxHealth}\n${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : ''}\n---\n`
     }
             
@@ -263,7 +263,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             }
 
             // Remove stat block from original content.
-            content = content.substring(0, match.index).trim();
+            content = content.substring(0, (match.index ?? 4) - 4).trim();
         }
     
 
