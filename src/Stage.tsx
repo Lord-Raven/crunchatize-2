@@ -232,7 +232,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         let statBlock = '';
         
 
-        const statBlockPattern = /---\n(?:Health:\s*(\d+)\/(\d+)\n)?((?:\w+\s*\(\w+\s*[+-]\d+\)\s*)*)/;
+        const statBlockPattern = /---\n(?:Health:\s*(\d+)\/(\d+))?((?:[\w\s-]+\s*\(\w+\s*[+-]\d+\)\s*)*)/;
         const match = content.match(statBlockPattern);
         
         if (match) {
@@ -246,7 +246,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
                 console.log('Found some inventory');
                 this.inventory = [];
                 const itemsText = match[3] || '';
-                const itemPattern = /(\w+)\s*\((\w+)\s*([+-]\d+)\)/g;
+                const itemPattern = /([\w\s-]+)\s*\((\w+)\s*([+-]\d+)\)/g;
                 let itemMatch;
             
                 while ((itemMatch = itemPattern.exec(itemsText)) !== null) {
