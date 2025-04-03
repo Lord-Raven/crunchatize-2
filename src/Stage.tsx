@@ -38,10 +38,14 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     lastOutcomePrompt: string = '';
     statExample: string = '[EXAMPLE STATBLOCK]\n' +
             `---\nHealth: 8/10\nSword (Might +2) Spellbook (Brains +1) Pocket Lint (Luck +1)\n---\n` +
+            '[/EXAMPLE STATBLOCK]\n[EXAMPLE STATBLOCK]\n' +
             `---\nHealth: 2/10\nTrusty Rifle (Skill +1) Fancy Shoes (Grace +2)\n---\n` +
-            '[/EXAMPLE STATBLOCK]'
-    buildResponsePrompt: (instruction: string) => string = (instruction: string) => {return `${this.statExample}\n[CURRENT STATBLOCK]\n---\nHealth: ${this.health}/${this.maxHealth}\n${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : 'Empty'}\n---` +
-        `[RESPONSE INSTRUCTION]${instruction}\nAfter narration, end the response with a revised version of CURRENT STATBLOCK, updating it to convey changes to {{user}}'s health and items based on events in the input and response.\n[/RESPONSE INSTRUCTION]`}
+            '[/EXAMPLE STATBLOCK]';
+    buildResponsePrompt: (instruction: string) => string = (instruction: string) => {return `${this.statExample}\n` +
+        `[RESPONSE INSTRUCTION]This response has two critical goals. First, narrate a short passage (one or two paragraphs) describing {{user}}'s actions and the reactions of the world around them. Second, output a formatted and updated statblock.\n` +
+        `${instruction}\nAfter narration, end the response with a revised version of CURRENT STATBLOCK, updating it to convey changes to {{user}}'s health and items based on events in the input and response.\n[/RESPONSE INSTRUCTION]\n` +
+        `[CURRENT STATBLOCK]\n---\nHealth: ${this.health}/${this.maxHealth}\n${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : 'Empty'}\n---[/CURRENT STATBLOCK]`
+    }
             
 
     // other
@@ -280,7 +284,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
                 `\`${Object.keys(Stat).map(key => `${key}: ${this.stats[key as Stat]}`).join(' | ')}\`<br>` +
                 `\`Health: ${this.health}/${this.maxHealth}\`<br>` +
                 `\`${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : `No items`}\`<br>` +
-                `---`,
+                `--- `,
             chatState: null
         };
     }
