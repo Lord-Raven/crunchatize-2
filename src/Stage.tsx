@@ -263,7 +263,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             }
 
             // Remove stat block from original content.
-            content = content.replace(statBlockPattern, '').trim();
+            content = content.substring(0, match.index).trim();
         }
     
 
@@ -296,6 +296,10 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             this.experience = messageState['experience'] ?? 0;
             this.health = messageState['health'] ?? 10;
             this.maxHealth = messageState['maxHealth'] ?? 10;
+            this.inventory = [];
+            for (let item of messageState['inventory'] ?? []) {
+                this.inventory.push(new Item(item.name, item.stat, item.bonus));
+            }
             this.inventory = messageState['inventory'] ?? [];
         }
     }
