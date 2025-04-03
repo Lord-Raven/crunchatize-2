@@ -41,8 +41,8 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             '###EXAMPLE STATBLOCK:\n' +
             `---\nHealth: 2/10\nTrusty Rifle (Skill +1) Fancy Shoes (Grace +2)\n---`;
     buildResponsePrompt: (instruction: string) => string = (instruction: string) => {return `${this.statExample}\n\n` +
-        `###CURRENT INSTRUCTION:\nThis response has two critical goals. First, narrate one or two paragraphs describing {{user}}'s actions and the reactions of the world around them. Second, end the response by outputting a formatted and updated statblock.\n\n` +
-        `${instruction}\nRemember to end the response with a revised version of CURRENT STATBLOCK, making updates as-needed to convey changes to {{user}}'s health and items based on events in the input and response.\n\n` +
+        `###CURRENT INSTRUCTION:\nThis response has two critical goals: first, narrate one or two paragraphs describing {{user}}'s actions and the reactions of the world around them; second, end the response by outputting a formatted statblock.\n\n` +
+        `${instruction}\nEnd the response by outputting CURRENT STATBLOCK, making logical updates as-needed to convey changes to {{user}}'s health and items based on recent activity.\n\n` +
         `###CURRENT STATBLOCK:\n---\nHealth: ${this.health}/${this.maxHealth}\n${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : ''}\n---\n`
     }
             
@@ -332,7 +332,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         this.lastOutcome = outcome;
         this.lastOutcomePrompt = '';
         if (this.lastOutcome) {
-            this.lastOutcomePrompt += `{{user}} has chosen the following action: ${this.lastOutcome.action.description}\n`;
+            this.lastOutcomePrompt += `For the narrative portion of the response, {{user}} has chosen the following action: ${this.lastOutcome.action.description}\n`;
             this.lastOutcomePrompt += `${ResultDescription[this.lastOutcome.result]}\n`
         }
     }
