@@ -36,9 +36,9 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     stats: {[stat in Stat]: number} = this.clearStatMap();
     lastOutcome: Outcome|null = null;
     lastOutcomePrompt: string = '';
-    statBlockPrompt: () => string = () => {return `End the response with a health stat and inventory list that reflects up-to-date changes to {{user}}'s state and items. Items should be listed in this format: Name (Stat +/- Bonus)\n` +
-            `Example:\n---\nHealth: 8/10\nSword (Might +2) Spellbook (Brains +1) Pocket Lint (Luck +1)\n---` +
-            `This is the current display to be updated (if needed):\n---\nHealth: ${this.health}/${this.maxHealth}\n${this.inventory.map(item => item.print()).join(' ')}\n---`};
+    statBlockPrompt: () => string = () => {return `End the response with a health stat and inventory list that reflects up-to-date changes to {{user}}'s state and items based on their input and this response. Items are listed in this format: Name (Stat +/-Bonus)\n` +
+            `Example:\n---\nHealth: 8/10\nSword (Might +2) Spellbook (Brains +1) Pocket Lint (Luck +1)\n---\n` +
+            `This is the current display to be updated (as needed):\n---\nHealth: ${this.health}/${this.maxHealth}\n${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : 'Empty'}\n---`};
 
     // other
     client: any;
@@ -275,7 +275,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
                 `\`{{user}} - Level ${this.getLevel() + 1} (${this.experience}/${this.levelThresholds[this.getLevel()]})\`<br>` +
                 `\`${Object.keys(Stat).map(key => `${key}: ${this.stats[key as Stat]}`).join(' | ')}\`<br>` +
                 `\`Health: ${this.health}/${this.maxHealth}\`<br>` +
-                `\`${this.inventory.length > 0 ? `${this.inventory.map(item => item.print()).join(' ')}` : `No items`}\`<br>` +
+                `\`${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : `No items`}\`<br>` +
                 `---`,
             chatState: null
         };
