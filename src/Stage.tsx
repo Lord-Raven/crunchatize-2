@@ -266,9 +266,9 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             error: null,
             systemMessage: `---\n` +
                 `\`{{user}} - Level ${this.getLevel() + 1} (${this.experience}/${this.levelThresholds[this.getLevel()]})\`<br>` +
-                `\`${Object.keys(Stat).map(key => `${key}: ${this.stats[key as Stat]}`).join(' | ')}\`` +
-                `\`Health: ${this.health}/${this.maxHealth}\`` +
-                `\`${this.inventory.map(item => item.print()).join(' ')}\`` +
+                `\`${Object.keys(Stat).map(key => `${key}: ${this.stats[key as Stat]}`).join(' | ')}\`<br>` +
+                `\`Health: ${this.health}/${this.maxHealth}\`<br>` +
+                `\`${this.inventory.length > 0 ? `${this.inventory.map(item => item.print()).join(' ')}` : `No items`}\`<br>` +
                 `---`,
             chatState: null
         };
