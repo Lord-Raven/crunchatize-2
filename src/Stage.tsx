@@ -2,7 +2,8 @@ import {ReactElement} from "react";
 import {StageBase, StageResponse, InitialData, Message, Character, User} from "@chub-ai/stages-ts";
 import {LoadResponse} from "@chub-ai/stages-ts/dist/types/load";
 import {Action} from "./Action";
-import {Stat} from "./Stat"
+import {Stat, findMostSimilarStat} from "./Stat"
+import {Item} from "./Item"
 import {Outcome, Result, ResultDescription} from "./Outcome";
 import {env, pipeline} from '@xenova/transformers';
 import {Client} from "@gradio/client";
@@ -27,11 +28,16 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     readonly levelThresholds: number[] = [2, 5, 8, 12, 16, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100];
 
     // message-level variables
+    maxHealth: number = 10;
+    health: number = 10;
+    inventory: Item[] = [];
     experience: number = 0;
     statUses: {[stat in Stat]: number} = this.clearStatMap();
     stats: {[stat in Stat]: number} = this.clearStatMap();
     lastOutcome: Outcome|null = null;
     lastOutcomePrompt: string = '';
+    statBlockPrompt: () => string = () => {return `End the response with a health stat and inventory list that reflects up-to-date changes to {{user}}'s state and items. Items should be listed in this format: Name (Stat +/- Bonus)\n` +
+            `Current:\n---\nHealth: ${this.health}/${this.maxHealth}\n${this.inventory.map(item => item.print()).join(' ')}\n---`};
 
     // other
     client: any;
@@ -191,7 +197,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         }
 
         return {
-            stageDirections: `\n[INST]${this.replaceTags(this.lastOutcomePrompt,{
+            stageDirections: `\n[INST]${this.replaceTags(`${this.lastOutcomePrompt}\n${this.statBlockPrompt()}`,{
                 "user": this.player.name,
                 "char": promptForId ? this.characters[promptForId].name : ''
             })}\n[/INST]`,
@@ -206,18 +212,64 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     getLevel(): number {
         return Object.values(this.stats).reduce((acc, val) => acc + val, 0)
     }
+
     async afterResponse(botMessage: Message): Promise<Partial<StageResponse<ChatStateType, MessageStateType>>> {
+
+        let {
+            content
+        } = botMessage;
+
+        let statBlock = '';
+
+        const matches = content.match(/---|\*\*\*/g);
+        if (matches && matches.length >= 2) {
+            const secondToLastIndex = content.lastIndexOf(matches[matches.length - 2]);
+            const lastIndex = content.lastIndexOf(matches[matches.length - 1]);
+            statBlock = content.substring(secondToLastIndex + matches[matches.length - 2].length, lastIndex).trim();
+            // Parse stat block for health and inventory.
+            
+            // Extract health information
+            const healthMatch = statBlock.match(/Health\s+(\d+)\/(\d+)/);
+            if (healthMatch) {
+                this.health = parseInt(healthMatch[1], 10);
+                this.maxHealth = parseInt(healthMatch[2], 10);
+            }
+
+            // Extract items
+            this.inventory = []
+            const itemMatches = statBlock.match(/(\w+)\s+\((\w+)\s+\+\s+(\d+)\)/g);
+            if (itemMatches) {
+                itemMatches.forEach(itemStr => {
+                    const itemMatch = itemStr.match(/(\w+)\s+\((\w+)\s+\+\s+(\d+)\)/);
+                    if (itemMatch) {
+                        const name = itemMatch[1];
+                        const stat = findMostSimilarStat(itemMatch[2]);
+                        const bonus = parseInt(itemMatch[3], 10);
+                        if (name && stat && bonus) {
+                            this.inventory.push(new Item(name, stat, bonus));
+                        }
+                    }
+                });
+            }
+
+            // Remove stat block from original content.
+            content = content.substring(0, secondToLastIndex).trim();
+        }
+    
 
         this.lastOutcomePrompt = '';
 
         return {
             stageDirections: null,
             messageState: this.buildMessageState(),
-            modifiedMessage: null,
+            modifiedMessage: content,
             error: null,
             systemMessage: `---\n` +
                 `\`{{user}} - Level ${this.getLevel() + 1} (${this.experience}/${this.levelThresholds[this.getLevel()]})\`<br>` +
-                `\`${Object.keys(Stat).map(key => `${key}: ${this.stats[key as Stat]}`).join(' | ')}\``,
+                `\`${Object.keys(Stat).map(key => `${key}: ${this.stats[key as Stat]}`).join(' | ')}\`` +
+                `\`Health: ${this.health}/${this.maxHealth}\`` +
+                `\`${this.inventory.map(item => item.print()).join(' ')}\`` +
+                `---`,
             chatState: null
         };
     }
@@ -232,6 +284,9 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             this.lastOutcome = messageState['lastOutcome'] ? this.convertOutcome(messageState['lastOutcome']) : null;
             this.lastOutcomePrompt = messageState['lastOutcomePrompt'] ?? '';
             this.experience = messageState['experience'] ?? 0;
+            this.health = messageState['health'] ?? 10;
+            this.maxHealth = messageState['maxHealth'] ?? 10;
+            this.inventory = messageState['inventory'] ?? [];
         }
     }
 
@@ -252,6 +307,9 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         messageState['lastOutcome'] = this.lastOutcome ?? null;
         messageState['lastOutcomePrompt'] = this.lastOutcomePrompt ?? '';
         messageState['experience'] = this.experience ?? 0;
+        messageState['health'] = this.health ?? 10;
+        messageState['maxHealth'] = this.maxHealth ?? 10;
+        messageState['inventory'] = this.inventory ?? [];
 
         return messageState;
     }
