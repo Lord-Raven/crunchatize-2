@@ -37,19 +37,19 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     lastOutcome: Outcome|null = null;
     lastOutcomePrompt: string = '';
     statExample: string = '###EXAMPLE STATBLOCK:\n' +
-            `---\nHealth: 10/10\nSword (Might +2) Feeling Fresh (Grace +2) Pocket Lint (Luck +1)\n---\n\n` +
+            `---\nHealth: 10/10\nSword (Might +2) Feeling Fresh (Grace +2) Pocket Lint (Luck +1)\n\n` +
             '###EXAMPLE STATBLOCK:\n' +
-            `---\nHealth: 8/10\nSword (Might +2) Spellbook (Brains +1) Pocket Lint (Luck +1)\n---\n\n` +
+            `---\nHealth: 8/10\nSword (Might +2) Spellbook (Brains +1) Pocket Lint (Luck +1)\n\n` +
             '###EXAMPLE STATBLOCK:\n' +
-            `---\nHealth: 7/10\nSword (Might +2) Pocket Lint (Luck +1)\n---\n\n` +
+            `---\nHealth: 7/10\nSword (Might +2) Pocket Lint (Luck +1)\n\n` +
             '###EXAMPLE STATBLOCK:\n' +
-            `---\nHealth: 3/10\nSword (Might +2) A Grotesque Scar (Charm -2) Pocket Lint (Luck +1)\n---`;
+            `---\nHealth: 3/10\nSword (Might +2) A Grotesque Scar (Charm -2) Pocket Lint (Luck +1)`;
     buildResponsePrompt: (instruction: string) => string = (instruction: string) => {return `${this.statExample}\n\n` +
         `###STATS: Might, Grace, Skill, Brains, Wits, Charm, Heart, Luck\n\n` +
         `###CURRENT INSTRUCTION:\nThis response has two critical goals: first, narrate no more than one or two paragraphs describing {{user}}'s actions and the reactions of the world around them; second, end the response by outputting a formatted statblock.\n\n` +
         `${instruction}\nEnd the response by simply including the CURRENT STATBLOCK below, making logical updates as-needed to convey changes to {{user}}'s health, equipment, and status effects based on recent activity. ` +
         `All listed equipment or statuses have a defined stat and a modifier between -3 and +3, following this format: Name (Stat +/-x).\n\n` +
-        `###CURRENT STATBLOCK:\n---\nHealth: ${this.health}/${this.maxHealth}\n${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : ''}\n---\n`
+        `###CURRENT STATBLOCK:\n---\nHealth: ${this.health}/${this.maxHealth}\n${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : ''}\n`
     }
             
 
@@ -248,11 +248,11 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             }
             if (match[3]) {
                 console.log('Found some inventory');
+                const previousInventory = [...this.inventory];
                 this.inventory = [];
                 const itemsText = match[3] || '';
                 const itemPattern = /([\w\s-]+)\s*\((\w+)\s*([+-]\d+)\)/g;
                 let itemMatch;
-            
                 while ((itemMatch = itemPattern.exec(itemsText)) !== null) {
                     const name = itemMatch[1];
                     const stat = findMostSimilarStat(itemMatch[2]);
@@ -261,7 +261,8 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
                         console.log(`New item: ${name}, ${stat}, ${bonus}`);
                         this.inventory.push(new Item(name, stat, bonus));
                     } else {
-                        console.log('Failed to parse an item');
+                        console.log('Failed to parse an item; revert');
+                        this.inventory = previousInventory;
                     }
                 }
             }
@@ -282,8 +283,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
                 `\`{{user}} - Level ${this.getLevel() + 1} (${this.experience}/${this.levelThresholds[this.getLevel()]})\`<br>` +
                 `\`${Object.keys(Stat).map(key => `${key}: ${this.stats[key as Stat]}`).join(' | ')}\`<br>` +
                 `\`Health: ${this.health}/${this.maxHealth}\`<br>` +
-                `\`${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : `No items`}\`<br>` +
-                `--- `,
+                `\`${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : ` `}\``,
             chatState: null
         };
     }
