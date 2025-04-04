@@ -243,17 +243,16 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             console.log(`Found a stat block: ${match}`);
             if (match[1] && match[2]) {
                 console.log(`Found some health: ${match[1]}/${match[2]}`);
-                this.health = parseInt(match[1]);
-                this.maxHealth = parseInt(match[2]);
+                this.health = parseInt(match[2]);
+                this.maxHealth = parseInt(match[3]);
             }
-            if (match[3]) {
-                console.log('Found some inventory');
+            if (match[4]) {
+                console.log(`Found some inventory: ${match[4]}`);
                 const previousInventory = [...this.inventory];
                 this.inventory = [];
-                const itemsText = match[3] || '';
                 const itemPattern = /([\w\s-]+)\s*\((\w+)\s*([+-]\d+)\)/g;
                 let itemMatch;
-                while ((itemMatch = itemPattern.exec(itemsText)) !== null) {
+                while ((itemMatch = itemPattern.exec(match[4])) !== null) {
                     const name = itemMatch[1];
                     const stat = findMostSimilarStat(itemMatch[2]);
                     const bonus = parseInt(itemMatch[3], 10);
@@ -266,11 +265,11 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
                     }
                 }
             }
-
-            // Remove stat block from original content.
-            content = content.substring(0, content.indexOf("\n---")).trim();
         }
-    
+        // Remove content after --- (hopefully, it's a stat block)
+        if (content.indexOf("---") > 0) {
+            content = content.substring(0, content.indexOf("---")).trim(); 
+        }   
 
         this.lastOutcomePrompt = '';
 
