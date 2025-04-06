@@ -47,7 +47,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     buildResponsePrompt: (instruction: string) => string = (instruction: string) => {return `${this.statExample}\n\n` +
         `###STATS: Might, Grace, Skill, Brains, Wits, Charm, Heart, Luck\n\n` +
         `###CURRENT INSTRUCTION:\nThis response has two critical goals: first, narrate no more than one or two paragraphs describing {{user}}'s actions and the reactions of the world around them; second, end the response by outputting a formatted statblock.\n\n` +
-        `${instruction}\nEnd the response by simply including the CURRENT STATBLOCK below, making logical updates as-needed to convey changes to {{user}}'s health, equipment, and status effects based on recent activity. ` +
+        `${instruction}\nEnd the response by including the CURRENT STATBLOCK below, making logical updates as-needed to convey changes to {{user}}'s health, equipment, and status effects based on events in the input and response. ` +
         `All listed equipment or statuses have a defined stat and a modifier between -3 and +3, following this strict format: Name (Stat +/-x).\n\n` +
         `###CURRENT STATBLOCK:\n---\nHealth: ${this.health}/${this.maxHealth}\n${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : ''}\n`
     }
@@ -265,6 +265,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
                     } else {
                         console.log('Failed to parse an item; revert');
                         this.inventory = previousInventory;
+                        break;
                     }
                 }
             }
