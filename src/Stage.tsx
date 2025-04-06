@@ -236,7 +236,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         let statBlock = '';
         
 
-        const statBlockPattern = /(Health:\s*(\d+)\/(\d+))((?:[\w\s-]+\s*\(\w+\s*[+-]\d+\)\s*)*)/;
+        const statBlockPattern = /(Health:\s*(\d+)\/(\d+))(.*)/;
         const match = content.match(statBlockPattern);
         
         if (match) {
@@ -248,11 +248,14 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             }
             if (match[4]) {
                 console.log(`Found some inventory: ${match[4]}`);
+                // Clean it up:
+                const itemString = match[4].replace(/<br>|\\n|`/g, ' ');
+                console.log(`Cleaned up inventory: ${itemString}`)
                 const previousInventory = [...this.inventory];
                 this.inventory = [];
                 const itemPattern = /([\w\s-]+)\s*\((\w+)\s*([+-]\d+)\)/g;
                 let itemMatch;
-                while ((itemMatch = itemPattern.exec(match[4])) !== null) {
+                while ((itemMatch = itemPattern.exec(itemString)) !== null) {
                     const name = itemMatch[1];
                     const stat = findMostSimilarStat(itemMatch[2]);
                     const bonus = parseInt(itemMatch[3], 10);
