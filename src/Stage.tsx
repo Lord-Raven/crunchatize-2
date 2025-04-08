@@ -52,12 +52,12 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         addedInventory.push(new Item('Newly Acquired Item', Object.values(Stat)[Math.floor(Math.random() * Object.values(Stat).length)], Math.floor(Math.random() * 5) - 2));
         if (moddedInventory.length > 0) {
             moddedInventory[0].bonus += 1;
-            removedInventory.slice
+            removedInventory.slice(0, 1);
         }
 
-        return(`### Current Statblock:\n${this.buildStatBlock(this.inventory)}` +
+        return `### Current Statblock:\n${this.buildStatBlock(this.inventory)}` +
             `\n\n### Example Statblock (Addition):\n${this.buildStatBlock(addedInventory)}` +
-            (moddedInventory.length > 0) ? (`\n\n### Example Statblock (Modification):\n${this.buildStatBlock(moddedInventory)}\n\n### Example Statblock (Removal):\n${this.buildStatBlock(removedInventory)}`) : '');
+            (moddedInventory.length > 0 ? (`\n\n### Example Statblock (Modification):\n${this.buildStatBlock(moddedInventory)}\n\n### Example Statblock (Removal):\n${this.buildStatBlock(removedInventory)}`) : '');
     };
 
     buildStatBlock: (inventory: Item[]) => string = (inventory: Item[]) => {
