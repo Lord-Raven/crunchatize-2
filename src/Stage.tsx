@@ -47,6 +47,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         let addedInventory = [...this.inventory];
         let moddedInventory = [...this.inventory];
         let removedInventory = [...this.inventory];
+        console.log(`length: ${this.inventory.length}`);
 
         addedInventory.push(new Item('Newly Acquired Item', Object.values(Stat)[Math.floor(Math.random() * Object.values(Stat).length)], Math.floor(Math.random() * 5) - 2));
         if (moddedInventory.length > 0) {
@@ -294,8 +295,8 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             modifiedMessage: content,
             error: null,
             systemMessage: `---\n` +
-                `\`{{user}} - Level ${this.getLevel() + 1} (${this.experience}/${this.levelThresholds[this.getLevel()]})\`<br>` +
-                `\`${Object.keys(Stat).map(key => `${key}: ${this.stats[key as Stat]}`).join(' | ')}\`<br>` +
+                //`\`{{user}} - Level ${this.getLevel() + 1} (${this.experience}/${this.levelThresholds[this.getLevel()]})\`<br>` +
+                //`\`${Object.keys(Stat).map(key => `${key}: ${this.stats[key as Stat]}`).join(' | ')}\`<br>` +
                 `\`Health: ${this.health}/${this.maxHealth}\`<br>` +
                 `\`${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : ` `}\``,
             chatState: null
