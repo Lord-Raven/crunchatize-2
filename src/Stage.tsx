@@ -271,19 +271,22 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
                 const itemPattern = /([\w\s-]+)\s*\(.+\)/gs;
                 let itemMatch;
                 while ((itemMatch = itemPattern.exec(itemString)) !== null) {
-                    const name = itemMatch[1];
-                    const statFirst = itemMatch[2].match(/(\w+)\s*([+-]\d+)/);
-                    const statLast = itemMatch[2].match(/([+-]\d+)\s*(\w+)/);
-                    console.log(`${statFirst}\n${statLast}`);
-                    const bonus = statFirst ? parseInt(statFirst[2]) : (statLast ? parseInt(statLast[1]) : null);
-                    const stat = statFirst ? findMostSimilarStat(statFirst[1]) : (statLast ? findMostSimilarStat(statLast[2]) : null);
-                    if (name && stat && bonus) {
-                        console.log(`New item: ${name}, ${stat}, ${bonus}`);
-                        this.inventory.push(new Item(name, stat, bonus));
-                    } else {
-                        console.log('Failed to parse an item; revert');
-                        this.inventory = previousInventory;
-                        break;
+                    console.log(itemMatch);
+                    if (itemMatch[1] && itemMatch[2]) {
+                        const name = itemMatch[1];
+                        const statFirst = itemMatch[2].match(/(\w+)\s*([+-]\d+)/);
+                        const statLast = itemMatch[2].match(/([+-]\d+)\s*(\w+)/);
+                        console.log(`${statFirst}\n${statLast}`);
+                        const bonus = statFirst ? parseInt(statFirst[2]) : (statLast ? parseInt(statLast[1]) : null);
+                        const stat = statFirst ? findMostSimilarStat(statFirst[1]) : (statLast ? findMostSimilarStat(statLast[2]) : null);
+                        if (name && stat && bonus) {
+                            console.log(`New item: ${name}, ${stat}, ${bonus}`);
+                            this.inventory.push(new Item(name, stat, bonus));
+                        } else {
+                            console.log('Failed to parse an item; revert');
+                            this.inventory = previousInventory;
+                            break;
+                        }
                     }
                 }
             }
