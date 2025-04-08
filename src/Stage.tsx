@@ -39,8 +39,9 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     buildResponsePrompt: (instruction: string) => string = (instruction: string) => {return `${this.buildSampleStatBlocks()}\n\n` +
         `### Stats: Might, Grace, Skill, Brains, Wits, Charm, Heart, Luck\n\n` +
         `### Current Instruction:\nThis response has two critical goals: first, narrate no more than one or two paragraphs describing {{user}}'s actions and the reactions of the world around them; second, end the response by outputting a formatted statblock.\n\n` +
-        `${instruction}\n\nEnd the response by including the current statblock from above, making logical updates as-needed to convey changes to {{user}}'s health, equipment, and status effects based on events in the input and response. ` +
-        `All listed equipment or statuses have a designated stat and a modifier between -3 and +3, indicating a penalty or bonus toward the selected stat. Follow this strict format: Name (+/-x Stat).\n\n` +
+        `${instruction}\n\nEnd the response by including the current statblock below, making logical updates as-needed to convey changes to {{user}}'s status based on events in the input and response: ` +
+        `updated health; new, removed, or modified equipment; and new, removed, or modified status effects. ` +
+        `All listed equipment or statuse effects have a designated stat and a modifier between -3 and +3, indicating a penalty or bonus toward the selected stat. Follow this strict format: Name (+/-x Stat).\n\n` +
         `### Current Statblock:\n${this.buildStatBlock(this.health, this.inventory)}\n`;
     };
 
