@@ -12,6 +12,6 @@ export class Item {
     }
 
     print() {
-        return `${this.name} (${this.bonus >= 0 ? `+${this.bonus}` : this.bonus} ${this.stat})`
+        return `${this.name} (${this.stat} ${this.bonus >= 0 ? `+${this.bonus}` : this.bonus})`
     }
 }

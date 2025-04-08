@@ -41,7 +41,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         `### Current Instruction:\nThis response has two critical goals: first, narrate no more than one or two paragraphs describing {{user}}'s actions and the reactions of the world around them; second, end the response by outputting a formatted statblock.\n\n` +
         `${instruction}\n\nEnd the response by including the current statblock below, making logical updates as-needed to convey changes to {{user}}'s status based on events in the input and response: ` +
         `updated health; new, removed, or modified equipment; and new, removed, or modified status effects. ` +
-        `All listed equipment or statuse effects have a designated stat and a modifier between -3 and +3, indicating a penalty or bonus toward the selected stat. Follow this strict format: Name (+/-x Stat).\n\n` +
+        `All listed equipment or statuse effects have a designated stat and a modifier between -3 and +3, indicating a penalty or bonus toward the selected stat. Follow this strict format: Name (Stat +/-x).\n\n` +
         `### Current Statblock:\n${this.buildStatBlock(this.health, this.inventory)}\n`;
     };
 
@@ -268,12 +268,15 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
                 console.log(`Cleaned up inventory: ${itemString}`)
                 const previousInventory = [...this.inventory];
                 this.inventory = [];
-                const itemPattern = /([\w\s-]+)\s*\(([+-]\d+)\s*(\w+)\)/gs;
+                const itemPattern = /([\w\s-]+)\s*\(.+\)/gs;
                 let itemMatch;
                 while ((itemMatch = itemPattern.exec(itemString)) !== null) {
                     const name = itemMatch[1];
-                    const bonus = parseInt(itemMatch[2], 10);
-                    const stat = findMostSimilarStat(itemMatch[3]);
+                    const statFirst = itemMatch[2].match(/(\w+)\s*([+-]\d+)/);
+                    const statLast = itemMatch[2].match(/([+-]\d+)\s*(\w+)/);
+                    console.log(`${statFirst}\n${statLast}`);
+                    const bonus = statFirst ? parseInt(statFirst[2]) : (statLast ? parseInt(statLast[1]) : null);
+                    const stat = statFirst ? findMostSimilarStat(statFirst[1]) : (statLast ? findMostSimilarStat(statLast[2]) : null);
                     if (name && stat && bonus) {
                         console.log(`New item: ${name}, ${stat}, ${bonus}`);
                         this.inventory.push(new Item(name, stat, bonus));
