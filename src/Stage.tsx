@@ -36,21 +36,32 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     stats: {[stat in Stat]: number} = this.clearStatMap();
     lastOutcome: Outcome|null = null;
     lastOutcomePrompt: string = '';
-    statExample: string = '###EXAMPLE STATBLOCK:\n' +
-            `---\nHealth: 10/10\nSword (Might +2) Feeling Fresh (Grace +2) Pocket Lint (Luck +1)\n\n` +
-            '###EXAMPLE STATBLOCK:\n' +
-            `---\nHealth: 8/10\nSword (Might +2) Spellbook (Brains +1) Pocket Lint (Luck +1)\n\n` +
-            '###EXAMPLE STATBLOCK:\n' +
-            `---\nHealth: 7/10\nSword (Might +2) Pocket Lint (Luck +1)\n\n` +
-            '###EXAMPLE STATBLOCK:\n' +
-            `---\nHealth: 3/10\nSword (Might +2) A Grotesque Scar (Charm -2) Pocket Lint (Luck +1)`;
-    buildResponsePrompt: (instruction: string) => string = (instruction: string) => {return `${this.statExample}\n\n` +
-        `###STATS: Might, Grace, Skill, Brains, Wits, Charm, Heart, Luck\n\n` +
-        `###CURRENT INSTRUCTION:\nThis response has two critical goals: first, narrate no more than one or two paragraphs describing {{user}}'s actions and the reactions of the world around them; second, end the response by outputting a formatted statblock.\n\n` +
+    buildResponsePrompt: (instruction: string) => string = (instruction: string) => {return `${this.buildSampleStatBlocks()}\n\n` +
+        `### Stats: Might, Grace, Skill, Brains, Wits, Charm, Heart, Luck\n\n` +
+        `### Current Instruction:\nThis response has two critical goals: first, narrate no more than one or two paragraphs describing {{user}}'s actions and the reactions of the world around them; second, end the response by outputting a formatted statblock.\n\n` +
         `${instruction}\nEnd the response by including the CURRENT STATBLOCK below, making logical updates as-needed to convey changes to {{user}}'s health, equipment, and status effects based on events in the input and response. ` +
-        `All listed equipment or statuses have a defined stat and a modifier between -3 and +3, following this strict format: Name (Stat +/-x).\n\n` +
-        `###CURRENT STATBLOCK:\n---\nHealth: ${this.health}/${this.maxHealth}\n${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : ''}\n`
-    }
+        `All listed equipment or statuses have a defined stat and a modifier between -3 and +3, following this strict format: Name (+/-x Stat).\n`
+    };
+
+    buildSampleStatBlocks: () => string = () => {
+        let addedInventory = [...this.inventory];
+        let moddedInventory = [...this.inventory];
+        let removedInventory = [...this.inventory];
+
+        addedInventory.push(new Item('Newly Acquired Item', Object.values(Stat)[Math.floor(Math.random() * Object.values(Stat).length)], Math.floor(Math.random() * 5) - 2));
+        if (moddedInventory.length > 0) {
+            moddedInventory[0].bonus += 1;
+            removedInventory.slice
+        }
+
+        return(`### Current Statblock:\n${this.buildStatBlock(this.inventory)}` +
+            `\n\n### Example Statblock (Addition):\n${this.buildStatBlock(addedInventory)}` +
+            (moddedInventory.length > 0) ? (`\n\n### Example Statblock (Modification):\n${this.buildStatBlock(moddedInventory)}\n\n### Example Statblock (Removal):\n${this.buildStatBlock(removedInventory)}`) : '';
+    };
+
+    buildStatBlock: (inventory: Item[]) => string = (inventory: Item[]) => {
+        return `---\nHealth: ${this.health}/${this.maxHealth}\n${inventory.length > 0 ? inventory.map(item => item.print()).join(' ') : ''}`
+    };
             
 
     // other
