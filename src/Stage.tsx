@@ -56,7 +56,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
 
         return(`### Current Statblock:\n${this.buildStatBlock(this.inventory)}` +
             `\n\n### Example Statblock (Addition):\n${this.buildStatBlock(addedInventory)}` +
-            (moddedInventory.length > 0) ? (`\n\n### Example Statblock (Modification):\n${this.buildStatBlock(moddedInventory)}\n\n### Example Statblock (Removal):\n${this.buildStatBlock(removedInventory)}`) : '';
+            (moddedInventory.length > 0) ? (`\n\n### Example Statblock (Modification):\n${this.buildStatBlock(moddedInventory)}\n\n### Example Statblock (Removal):\n${this.buildStatBlock(removedInventory)}`) : '');
     };
 
     buildStatBlock: (inventory: Item[]) => string = (inventory: Item[]) => {
@@ -264,12 +264,12 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
                 console.log(`Cleaned up inventory: ${itemString}`)
                 const previousInventory = [...this.inventory];
                 this.inventory = [];
-                const itemPattern = /([\w\s-]+)\s*\((\w+)\s*([+-]\d+)\)/gs;
+                const itemPattern = /([\w\s-]+)\s*\(([+-]\d+)\s*(\w+)\)/gs;
                 let itemMatch;
                 while ((itemMatch = itemPattern.exec(itemString)) !== null) {
                     const name = itemMatch[1];
-                    const stat = findMostSimilarStat(itemMatch[2]);
-                    const bonus = parseInt(itemMatch[3], 10);
+                    const bonus = parseInt(itemMatch[2], 10);
+                    const stat = findMostSimilarStat(itemMatch[3]);
                     if (name && stat && bonus) {
                         console.log(`New item: ${name}, ${stat}, ${bonus}`);
                         this.inventory.push(new Item(name, stat, bonus));
