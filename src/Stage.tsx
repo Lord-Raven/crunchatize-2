@@ -40,7 +40,8 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         `### Stats: Might, Grace, Skill, Brains, Wits, Charm, Heart, Luck\n\n` +
         `### Current Instruction:\nThis response has two critical goals: first, narrate no more than one or two paragraphs describing {{user}}'s actions and the reactions of the world around them; second, end the response by outputting a formatted statblock.\n\n` +
         `${instruction}\n\nEnd the response by including the current statblock from above, making logical updates as-needed to convey changes to {{user}}'s health, equipment, and status effects based on events in the input and response. ` +
-        `All listed equipment or statuses have a designated stat and a modifier between -3 and +3, indicating a penalty or bonus toward the selected stat. Follow this strict format: Name (+/-x Stat).\n`
+        `All listed equipment or statuses have a designated stat and a modifier between -3 and +3, indicating a penalty or bonus toward the selected stat. Follow this strict format: Name (+/-x Stat).\n\n` +
+        `### Current Statblock:\n${this.buildStatBlock(this.health, this.inventory)}\n`;
     };
 
     buildSampleStatBlocks: () => string = () => {
@@ -55,8 +56,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             removedInventory.slice(0, 1);
         }
 
-        return `### Current Statblock:\n${this.buildStatBlock(this.health, this.inventory)}` +
-            `\n\n### Example Statblock (Addition):\n${this.buildStatBlock(this.health, addedInventory)}` +
+        return `### Example Statblock (Addition):\n${this.buildStatBlock(this.health, addedInventory)}` +
             (moddedInventory.length > 0 ? (`\n\n### Example Statblock (Modification):\n${this.buildStatBlock(this.health, moddedInventory)}\n\n### Example Statblock (Removal):\n${this.buildStatBlock(this.health, removedInventory)}`) : '') +
             `\n\n### Example Statblock (Health Loss):\n${this.buildStatBlock(this.health - 3, [...this.inventory, new Item('Gaping Wound', Stat.Heart, -2)])}` +
             (this.health < this.maxHealth ? (`\n\n### Example Statblock (Health Gain):\n${this.buildStatBlock(this.health + 1, [...this.inventory, new Item('Cool Scar', Stat.Charm, 1)])}`) : '');
