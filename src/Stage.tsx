@@ -270,7 +270,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
                 console.log(`Cleaned up inventory: ${itemString}`)
                 const previousInventory = [...this.inventory];
                 this.inventory = [];
-                const itemPattern = /([\w\s-]+)\s*\((.+)\)/g;
+                const itemPattern = /([\w\s-]+)\s*\(([^)]+)\)/g;
                 let itemMatch;
                 while ((itemMatch = itemPattern.exec(itemString)) !== null) {
                     console.log(itemMatch);
