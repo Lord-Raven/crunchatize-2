@@ -41,7 +41,8 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         `### Current Instruction:\nThis response has two critical goals: first, narrate one or two paragraphs describing {{user}}'s actions and the reactions of the world around them; second, conclude the response with a formatted statblock.\n\n` +
         `${instruction}\n\nEnd the response by outputting the current statblock below, making logical updates as-needed to convey changes to {{user}}'s status, based on events in the input and response: ` +
         `updated health; new, removed, or modified equipment; and new, removed, or modified status effects. ` +
-        `All listed equipment or statuse effects have a designated stat and a modifier between -3 and +3, indicating a penalty or bonus toward the selected stat. Follow this strict format: Name (Stat +/-x).\n\n` +
+        `All listed equipment or status effects have a relevant stat and a modifier between -3 and +3, indicating a penalty or bonus toward the selected stat. ` +
+        `When adding or modifying items or status effects, choose a stat and modifier that illustrate the impact of that item or effect, and always follow this strict format: Name (Stat +/-x).\n\n` +
         `### Current Statblock:\n${this.buildStatBlock(this.health, this.inventory)}\n`;
     };
 
