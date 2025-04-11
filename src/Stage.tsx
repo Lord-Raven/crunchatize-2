@@ -66,7 +66,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     };
 
     buildStatBlock: (health: number, inventory: Item[]) => string = (health, inventory) => {
-        return `---\nHealth: ${health}/${this.maxHealth}\n${inventory.length > 0 ? inventory.map(item => item.print()).join(' ') : ''}`
+        return `---\n${this.player.name} - Health: ${health}/${this.maxHealth}\n${inventory.length > 0 ? inventory.map(item => item.print()).join(' ') : ''}`
     };
             
 
@@ -293,6 +293,10 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
                 }
             }
         }
+        // Remove initial --- from start of response (some LLMs like to do this):
+        if (content.indexOf("---") == 0) {
+            content = content.substring(3);
+        }
         // Remove content after --- (hopefully, it's a stat block)
         if (content.indexOf("---") > 0) {
             content = content.substring(0, content.indexOf("---")).trim(); 
@@ -308,7 +312,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             systemMessage: `---\n` +
                 //`\`{{user}} - Level ${this.getLevel() + 1} (${this.experience}/${this.levelThresholds[this.getLevel()]})\`<br>` +
                 //`\`${Object.keys(Stat).map(key => `${key}: ${this.stats[key as Stat]}`).join(' | ')}\`<br>` +
-                `\`Health: ${this.health}/${this.maxHealth}\`<br>` +
+                `\`{{user}} - Health: ${this.health}/${this.maxHealth}\`<br>` +
                 `\`${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : ` `}\``,
             chatState: null
         };
