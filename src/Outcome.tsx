@@ -25,12 +25,12 @@ export const ResultSpan: {[result in Result]: (input: string) => string} = {
 }
 
 const emojiDice: {[key: number]: string} = {
-    1: ResultSpan["Failure"]('\u2680 1'),
-    2: ResultSpan["Mixed Success"]('\u2681 2'),
-    3: ResultSpan["Mixed Success"]('\u2682 3'),
-    4: ResultSpan["Complete Success"]('\u2683 4'),
-    5: ResultSpan["Complete Success"]('\u2684 5'),
-    6: ResultSpan["Critical Success"]('\u2685 6')
+    1: ResultSpan[Result.Failure]('\u2680 1'),
+    2: ResultSpan[Result.MixedSuccess]('\u2681 2'),
+    3: ResultSpan[Result.MixedSuccess]('\u2682 3'),
+    4: ResultSpan[Result.CompleteSuccess]('\u2683 4'),
+    5: ResultSpan[Result.CompleteSuccess]('\u2684 5'),
+    6: ResultSpan[Result.CriticalSuccess]('\u2685 6')
 }
 
 export class Outcome {
@@ -41,33 +41,16 @@ export class Outcome {
     total: number;
 
     constructor(dieResult1: number, dieResult2: number, action: Action) {
-        const total = dieResult1 + dieResult2 + action.difficultyModifier + action.skillModifier;
+        const total = dieResult1 + dieResult2 + action.difficultyModifier + Object.values(action.skillModifiers).reduce((acc, curr) => acc + curr, 0);
         this.result = (!action.stat ? Result.None : (dieResult1 + dieResult2 == 12 ? Result.CriticalSuccess : (total >= 10 ? Result.CompleteSuccess : (total >= 7 ? Result.MixedSuccess : Result.Failure))));
 
         this.dieResult1 = dieResult1;
         this.dieResult2 = dieResult2;
         this.action = action;
-        this.total = this.dieResult1 + this.dieResult2 + this.action.difficultyModifier + this.action.skillModifier;
-    }
-
-    // No longer used; using unicode characters.
-    render() {
-        const style = {
-            width: '1em',
-            height: 'auto'
-        };
-        return (
-            <div>
-                {this.result} (
-                    <img src={`/assets/dice_${this.dieResult1}.png`} style={style} alt={`D6 showing ${this.dieResult1}`} />
-                    <img src={`/assets/dice_${this.dieResult2}.png`} style={style} alt={`D6 showing ${this.dieResult2}`} />
-                    + {this.action.difficultyModifier} + {this.action.skillModifier} = {this.total})
-            </div>
-        );
+        this.total = total;
     }
 
     getDieEmoji(side: number): string {
-
         return emojiDice[side];
     }
 
@@ -75,19 +58,23 @@ export class Outcome {
         const modString = `${Math.abs(modifier)}`;
         switch(modifier) {
             case 1:
-                return `${modifier >= 0 ? ' + ' : ' - '}${ResultSpan["Critical Success"](modString)}`;
+                return `${modifier >= 0 ? ' + ' : ' - '}${ResultSpan[Result.CriticalSuccess](modString)}`;
             case 0:
-                return `${modifier >= 0 ? ' + ' : ' - '}${ResultSpan["Complete Success"](modString)}`;
+                return `${modifier >= 0 ? ' + ' : ' - '}${ResultSpan[Result.CompleteSuccess](modString)}`;
             case -1:
-                return `${modifier >= 0 ? ' + ' : ' - '}${ResultSpan["Mixed Success"](modString)}`;
+                return `${modifier >= 0 ? ' + ' : ' - '}${ResultSpan[Result.MixedSuccess](modString)}`;
             default:
-                return `${modifier >= 0 ? ' + ' : ' - '}${ResultSpan["Failure"](modString)}`;
+                return `${modifier >= 0 ? ' + ' : ' - '}${ResultSpan[Result.Failure](modString)}`;
         }
     }
 
     getDescription(): string {
         if (this.action.stat) {
-            return `###(${this.action.stat}) ${this.action.description}###\n#${this.getDieEmoji(this.dieResult1)} + ${this.getDieEmoji(this.dieResult2)}${this.getDifficultyColor(this.action.difficultyModifier)}<sup><sub><sup>(difficulty)</sup></sub></sup>${this.action.skillModifier > 0 ? ` + ${ResultSpan["Complete Success"](`${this.action.skillModifier}`)}<sup><sub><sup>(skill)</sup></sub></sup>` : ''} = ${ResultSpan[this.result](`${this.total} (${this.result})`)}#`
+            return `###(${this.action.stat}) ${this.action.description}###\n#${this.getDieEmoji(this.dieResult1)} + ${this.getDieEmoji(this.dieResult2)}${this.getDifficultyColor(this.action.difficultyModifier)}<sup><sub><sup>(difficulty)</sup></sub></sup>` +
+                Object.keys(this.action.skillModifiers).map(key => this.action.skillModifiers[key] > 0 ? 
+                    ` + ${ResultSpan[Result.CompleteSuccess](`${this.action.skillModifiers[key]}`)}<sup><sub><sup>${key}</sup></sub></sup>` : 
+                    (this.action.skillModifiers[key] < 0 ? ` - ${ResultSpan[Result.Failure](`${Math.abs(this.action.skillModifiers[key])}`)}<sup><sub><sup>${key}</sup></sub></sup>` : '')).join('') +
+                ` = ${ResultSpan[this.result](`${this.total} (${this.result})`)}#`
         } else {
             return `###(No Check) ${this.action.description}###`;
         }
