@@ -26,13 +26,4 @@ export class Action {
         const dieResult2: number = this.diceRoll();
         return new Outcome(dieResult1, dieResult2, this);
     }
-
-    fullDescription(): string {
-        if (this.stat) {
-            return `(${this.stat} ${this.difficultyModifier >= 0 ? ('+' + this.difficultyModifier) : (this.difficultyModifier < 0 ? this.difficultyModifier : '')}` +
-                Object.keys(this.skillModifiers).map(key => {this.skillModifiers[key] >= 0 ? ` +${this.skillModifiers[key]}` : `${this.skillModifiers[key]}`}).join(' ') + ` ${this.description}`;
-        } else {
-            return `${this.description}`;
-        }
-    }
 }

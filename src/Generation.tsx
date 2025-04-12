@@ -47,7 +47,8 @@ function buildStatPrompt(stage: Stage): string {
             `Reason: Represents logical thinking, analysis, and problem-solving skills, crucial for making sound decisions based on evidence and intellect.\n`) +
         buildSection('Current Instruction',
             `You are doing critical prep work for a new roleplaying game. Instead of narrating, you will first use this planning response to review the FLAVOR TEXT and invent four to eight comprehensive core attributes and their descriptions. ` +
-            `Use the FLAVOR TEXT as inspirational material as you name and describe a handful of RPG attributes that suit the vibe of the setting or character, ensuring that each stat covers a distinct area of character development or gameplay. ` +
+            `Use the FLAVOR TEXT as inspirational material as you name and describe a handful of RPG attributes that suit the vibe of the setting, ensuring that each stat covers a distinct area of character development or gameplay. ` +
+            `These stats will be applied to other characters beyond those found in the FLAVOR TEXT, so they should suit a spectrum of activities. ` +
             `This essential, preparatory response includes four to eight lines, each following this format: "Name - Brief description of what the attribute governs, potentially including example actions that fall under this domain." ` +
             `Simply define these attributes and promptly end your response.\n`) +
         '### Future Instruction:');

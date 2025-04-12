@@ -93,7 +93,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         this.setStateFromMessageState(messageState);
 
         if (chatState) {
-            this.stats = chatState.stats;
+            this.stats = {}; //chatState.stats;
             console.log('Loaded stats from chatState:');
             console.log(this.stats);
         } else {
@@ -118,11 +118,6 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         } catch (error) {
             console.error(`Error connecting to backend pipeline; will resort to local inference.`);
             this.fallbackMode = true;
-        }
-
-        if (Object.values(this.stats).length == 0) {
-            console.log('Generate stats');
-            await generateStats(this);
         }
 
         console.log('Finished loading stage.');
@@ -153,25 +148,18 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         let takenAction: Action|null = null;
         let finalContent: string|undefined = content;
 
+        if (Object.values(this.stats).length == 0) {
+            console.log('Generate stats');
+            await generateStats(this);
+        }
+
         if (finalContent) {
             let sequence = this.replaceTags(content,
                 {"user": this.player.name, "char": promptForId ? this.characters[promptForId].name : ''});
 
-            const statMapping:{[key: string]: string} = {
-                'hit, wrestle': 'Might',
-                'lift, throw, climb': 'Might',
-                'endure, intimidate': 'Might',
-                'jump, dodge, balance, dance, fall, land, sneak': 'Grace',
-                'aim, shoot': 'Skill',
-                'craft, lock-pick, pickpocket, repair': 'Skill',
-                'recall, memorize, solve, strategize, debate': 'Brains',
-                'adapt, quip, spot, trick, hide': 'Wits',
-                'persuade, lie, entice, perform': 'Charm',
-                'resist, recover, empathize, comfort': 'Heart',
-                'gamble, hope, discover, guess': 'Luck',
-                'chat, rest, wait, idle': 'None'};
+            const statMapping:{[key: string]: string} = Object.values(this.stats).reduce((acc, stat) => {acc[stat.name] = `${stat.name}. ${stat.description}`; return acc;}, {} as {[key: string]: string});
             let topStat: Stat|null = null;
-            const statHypothesis = 'The narrator is attempting to do one of the following: {}, or something similar.'
+            const statHypothesis = `The narrator's actions or dialog relate to {}.`
             const statPromise = this.query({sequence: sequence, candidate_labels: Object.keys(statMapping), hypothesis_template: statHypothesis, multi_label: true });
 
             const difficultyMapping:{[key: string]: number} = {
