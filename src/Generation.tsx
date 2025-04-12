@@ -61,8 +61,8 @@ export async function generateStats(stage: Stage) {
     while (Object.values(stage.stats).length < 4 && tries > 0) {
         let textResponse = await stage.generator.textGen({
             prompt: buildStatPrompt(stage),
-            max_tokens: 120,
-            min_tokens: 50
+            max_tokens: 250,
+            min_tokens: 100
         });
         if (textResponse && textResponse.result) {
             stage.stats = {};
