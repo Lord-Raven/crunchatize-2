@@ -12,7 +12,7 @@ export class Action {
         this.description = description;
         this.stat = stat;
         this.difficultyModifier = difficultyModifier;
-        this.skillModifiers = inventory.filter(item => stat && item.stat == stat.name).reduce<{[key: string]: number}>((acc, item) => {acc[item.name] = item.bonus; return acc;}, {});
+        this.skillModifiers = inventory ? inventory.filter(item => stat && item.stat == stat.name).reduce<{[key: string]: number}>((acc, item) => {acc[item.name] = item.bonus; return acc;}, {}) : {};
     }
 
     // Method to simulate a dice roll
