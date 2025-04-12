@@ -79,7 +79,7 @@ export async function generateStats(stage: Stage) {
 
     if (Object.values(stage.stats).length < 4) {
         stage.stats = {};
-        throw Error('Failed to generate stats.');
+        console.log(`Failed to generate stats.`);
     } else {
         console.log(`Generated stats:`);
         console.log(stage.stats);    
