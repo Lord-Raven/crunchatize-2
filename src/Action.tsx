@@ -1,18 +1,18 @@
+import { Item } from "./Item";
 import {Outcome} from "./Outcome";
-import { Stage } from "./Stage";
 import {Stat} from "./Stat";
 
 export class Action {
     description: string;
     stat: Stat|null;
     difficultyModifier: number;
-    skillModifier: number;
+    skillModifiers: {[key: string]: number};
 
-    constructor(description: string, stat: Stat|null, difficultyModifier: number, skillModifier: number) {
+    constructor(description: string, stat: Stat|null, difficultyModifier: number, inventory: Item[]) {
         this.description = description;
         this.stat = stat;
         this.difficultyModifier = difficultyModifier;
-        this.skillModifier = skillModifier;
+        this.skillModifiers = inventory.filter(item => stat && item.stat == stat.name).reduce<{[key: string]: number}>((acc, item) => {acc[item.name] = item.bonus; return acc;}, {});
     }
 
     // Method to simulate a dice roll
@@ -29,19 +29,10 @@ export class Action {
 
     fullDescription(): string {
         if (this.stat) {
-            return `(${this.stat} ${this.difficultyModifier >= 0 ? ('+' + this.difficultyModifier) : (this.difficultyModifier < 0 ? this.difficultyModifier : '')}${this.skillModifier > 0 ? ` +${this.skillModifier}` : ''}) ${this.description}`;
+            return `(${this.stat} ${this.difficultyModifier >= 0 ? ('+' + this.difficultyModifier) : (this.difficultyModifier < 0 ? this.difficultyModifier : '')}` +
+                Object.keys(this.skillModifiers).map(key => {this.skillModifiers[key] >= 0 ? ` +${this.skillModifiers[key]}` : `${this.skillModifiers[key]}`}).join(' ') + ` ${this.description}`;
         } else {
             return `${this.description}`;
         }
-    }
-
-    render(stage: Stage) {
-        return (
-            <div>
-                <button>
-                    ({this.stat} {this.difficultyModifier >= 0 ? ('+' + this.difficultyModifier) : (this.difficultyModifier < 0 ? this.difficultyModifier : '')}${this.skillModifier > 0 ? ` +${this.skillModifier}` : ''}) {this.description}
-                </button>
-            </div>
-        );
     }
 }

@@ -2,10 +2,10 @@ import { Stat } from "./Stat";
 
 export class Item {
     name: string;
-    stat: Stat;
+    stat: string;
     bonus: number;
 
-    constructor(name: string, stat: Stat, bonus: number) {
+    constructor(name: string, stat: string, bonus: number) {
         this.name = name;
         this.stat = stat;
         this.bonus = bonus;

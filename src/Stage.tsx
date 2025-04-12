@@ -7,6 +7,7 @@ import {Item} from "./Item"
 import {Outcome, Result, ResultDescription} from "./Outcome";
 import {env, pipeline} from '@xenova/transformers';
 import {Client} from "@gradio/client";
+import { generateStats } from "./Generation";
 
 type MessageStateType = any;
 
@@ -27,13 +28,14 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     readonly defaultStat: number = 0;
     readonly levelThresholds: number[] = [2, 5, 8, 12, 16, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100];
 
+    // chat-level variables
+    stats: {[key: string]: Stat};
+
     // message-level variables
     maxHealth: number = 10;
     health: number = 10;
     inventory: Item[] = [];
     experience: number = 0;
-    statUses: {[stat in Stat]: number} = this.clearStatMap();
-    stats: {[stat in Stat]: number} = this.clearStatMap();
     lastOutcome: Outcome|null = null;
     lastOutcomePrompt: string = '';
     buildResponsePrompt: (instruction: string) => string = (instruction: string) => {return `${this.buildSampleStatBlocks()}\n\n` +
@@ -61,8 +63,8 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
 
         return `### Example Statblock (Addition):\n${this.buildStatBlock(this.health, addedInventory)}` +
             (moddedInventory.length > 0 ? (`\n\n### Example Statblock (Modification):\n${this.buildStatBlock(this.health, moddedInventory)}\n\n### Example Statblock (Removal):\n${this.buildStatBlock(this.health, removedInventory)}`) : '') +
-            `\n\n### Example Statblock (Health Loss):\n${this.buildStatBlock(this.health - 3, [...this.inventory, new Item('Gaping Wound', Stat.Heart, -2)])}` +
-            (this.health < this.maxHealth ? (`\n\n### Example Statblock (Health Gain):\n${this.buildStatBlock(this.health + 1, [...this.inventory, new Item('Cool Scar', Stat.Charm, 1)])}`) : '');
+            `\n\n### Example Statblock (Health Loss):\n${this.buildStatBlock(this.health - 3, [...this.inventory, new Item('Gaping Wound', 'Some Stat', -2)])}` +
+            (this.health < this.maxHealth ? (`\n\n### Example Statblock (Health Gain):\n${this.buildStatBlock(this.health + 1, [...this.inventory, new Item('Cool Scar', 'Some Stat', 1)])}`) : '');
     };
 
     buildStatBlock: (health: number, inventory: Item[]) => string = (health, inventory) => {
@@ -84,27 +86,23 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             characters,
             users,
             messageState,
+            chatState
         } = data;
-        this.setStateFromMessageState(messageState);
         this.player = users[Object.keys(users)[0]];
         this.characters = characters;
+        this.setStateFromMessageState(messageState);
+
+        if (chatState) {
+            this.stats = chatState.stats;
+            console.log('Loaded stats from chatState:');
+            console.log(this.stats);
+        } else {
+            this.stats = {};
+        }
 
         this.fallbackMode = false;
         this.fallbackPipeline = null;
         env.allowRemoteModels = false;
-    }
-
-    clearStatMap() {
-        return {
-            [Stat.Might]: 0,
-            [Stat.Grace]: 0,
-            [Stat.Skill]: 0,
-            [Stat.Brains]: 0,
-            [Stat.Wits]: 0,
-            [Stat.Charm]: 0,
-            [Stat.Heart]: 0,
-            [Stat.Luck]: 0
-        };
     }
 
     async load(): Promise<Partial<LoadResponse<InitStateType, ChatStateType, MessageStateType>>> {
@@ -122,13 +120,18 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             this.fallbackMode = true;
         }
 
+        if (Object.values(this.stats).length == 0) {
+            console.log('Generate stats');
+            await generateStats(this);
+        }
+
         console.log('Finished loading stage.');
 
         return {
             success: true,
             error: null,
             initState: null,
-            chatState: null,
+            chatState: {stats: this.stats},
         };
     }
 
@@ -193,9 +196,9 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             }
 
             if (topStat && difficultyRating < 1000) {
-                takenAction = new Action(finalContent, topStat, difficultyRating, this.stats[topStat]);
+                takenAction = new Action(finalContent, topStat, difficultyRating, this.inventory);
             } else {
-                takenAction = new Action(finalContent, null, 0, 0);
+                takenAction = new Action(finalContent, null, 0, this.inventory);
             }
         }
 
@@ -203,24 +206,19 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             this.setLastOutcome(takenAction.determineSuccess());
             finalContent = this.lastOutcome?.getDescription();
 
-            if (takenAction.stat) {
-                this.statUses[takenAction.stat]++;
-            }
-
             if (this.lastOutcome && [Result.Failure, Result.CriticalSuccess].includes(this.lastOutcome.result)) {
                 this.experience++;
                 let level = this.getLevel();
                 if (this.experience == this.levelThresholds[level]) {
-                    const maxCount = Math.max(...Object.values(this.statUses));
+                    /*const maxCount = Math.max(...Object.values(this.statUses));
                     const maxStats = Object.keys(this.statUses)
                             .filter((stat) => this.statUses[stat as Stat] === maxCount)
                             .map((stat) => stat as Stat);
                     let chosenStat = maxStats[Math.floor(Math.random() * maxStats.length)];
-                    this.stats[chosenStat]++;
 
                     finalContent += `\n##Welcome to level ${level + 2}!##\n#_${chosenStat}_ up!#`;
 
-                    this.statUses = this.clearStatMap();
+                    this.statUses = this.clearStatMap();*/
                 } else {
                     finalContent += `\n###You've learned from this experience...###`
                 }
@@ -241,7 +239,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     }
 
     getLevel(): number {
-        return Object.values(this.stats).reduce((acc, val) => acc + val, 0)
+        return 0; // Object.values(this.statScores).reduce((acc, val) => acc + val, 0)
     }
 
     async afterResponse(botMessage: Message): Promise<Partial<StageResponse<ChatStateType, MessageStateType>>> {
@@ -280,10 +278,10 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
                         const statLast = itemMatch[2].match(/([+-]\d+)\s*(\w+)/);
                         console.log(`${statFirst}\n${statLast}`);
                         const bonus = statFirst ? parseInt(statFirst[2]) : (statLast ? parseInt(statLast[1]) : null);
-                        const stat = statFirst ? findMostSimilarStat(statFirst[1]) : (statLast ? findMostSimilarStat(statLast[2]) : null);
+                        const stat = statFirst ? findMostSimilarStat(statFirst[1], this.stats) : (statLast ? findMostSimilarStat(statLast[2], this.stats) : null);
                         if (name && stat && bonus) {
                             console.log(`New item: ${name}, ${stat}, ${bonus}`);
-                            this.inventory.push(new Item(name, stat, bonus));
+                            this.inventory.push(new Item(name, stat.name, bonus));
                         } else {
                             console.log('Failed to parse an item; revert');
                             this.inventory = previousInventory;
@@ -319,12 +317,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     }
 
     setStateFromMessageState(messageState: MessageStateType) {
-        this.stats = this.clearStatMap();
         if (messageState != null) {
-            for (let stat in Stat) {
-                this.stats[stat as Stat] = messageState[stat] ?? this.defaultStat;
-                this.statUses[stat as Stat] = messageState[`use_${stat}`] ?? 0;
-            }
             this.lastOutcome = messageState['lastOutcome'] ? this.convertOutcome(messageState['lastOutcome']) : null;
             this.lastOutcomePrompt = messageState['lastOutcomePrompt'] ?? '';
             this.experience = messageState['experience'] ?? 0;
@@ -347,10 +340,10 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
 
     buildMessageState(): any {
         let messageState: {[key: string]: any} = {};
-        for (let stat in Stat) {
-            messageState[stat] = this.stats[stat as Stat] ?? this.defaultStat;
+        /*for (let stat in Stat) {
+            messageState[stat] = this.statScores[stat as Stat] ?? this.defaultStat;
             messageState[`use_${stat}`] = this.statUses[stat as Stat] ?? 0;
-        }
+        }*/
         messageState['lastOutcome'] = this.lastOutcome ?? null;
         messageState['lastOutcomePrompt'] = this.lastOutcomePrompt ?? '';
         messageState['experience'] = this.experience ?? 0;
