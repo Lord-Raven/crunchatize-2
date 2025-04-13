@@ -39,12 +39,12 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     lastOutcome: Outcome|null = null;
     lastOutcomePrompt: string = '';
     buildResponsePrompt: (instruction: string) => string = (instruction: string) => {return `${this.buildSampleStatBlocks()}\n\n` +
-        `### Stats: Might, Grace, Skill, Brains, Wits, Charm, Heart, Luck\n\n` +
+        `### Stats:\n${Object.values(this.stats).map(stat => `${stat.name} - ${stat.description}`)}\n\n` +
         `### Current Instruction:\nThis response has two critical goals: first, narrate one or two paragraphs organically describing {{user}}'s actions and the reactions of the world around them; second, conclude the response with a formatted statblock.\n\n` +
-        `${instruction}\n\nEnd the response by functionally outputting the current statblock below, making logical updates as-needed to reflect changes to {{user}}'s status, based on events in the input and response: ` +
-        `updated health; newly acquired, lost, or modified equipment for {{user}}; and newly imposed, removed, or modified status effects that impact {{user}}'s stats. ` +
-        `In contrast with the initial, narrative portion of the response, which is illustrative and natural, the statblock is purely mechanical and formatted. ` +
-        `All listed equipment or status effects follow the same format, with a name, relevant stat, and modifier between -3 and +3, indicating a penalty or bonus toward the selected stat. ` +
+        `${instruction}\n\nEnd the response by functionally outputting the current statblock below, making logical updates, if needed, to reflect changes to {{user}}'s status, based on events in the input and response: ` +
+        `updated health; newly acquired, lost, or modified equipment for {{user}}; and newly imposed, removed, or updated status effects that impact {{user}}'s stats. ` +
+        `In contrast with the initial, narrative portion of the response, which is illustrative and natural, the statblock is mechanical and formatted. ` +
+        `All listed equipment or status effects follow the same format, with a name, relevant stat, and modifier between -3 and +3, indicating a penalty (negative) or bonus (positive) toward the selected stat. ` +
         `When adding or modifying items or status effects, choose a stat and modifier that illustrate the impact of that item or effect, and always follow this strict format: Name (Stat +/-x).\n\n` +
         `### Current Statblock:\n${this.buildStatBlock(this.health, this.inventory)}\n`;
     };
@@ -61,10 +61,13 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             removedInventory.slice(0, 1);
         }
 
-        return `### Example Statblock (Addition):\n${this.buildStatBlock(this.health, addedInventory)}` +
-            (moddedInventory.length > 0 ? (`\n\n### Example Statblock (Modification):\n${this.buildStatBlock(this.health, moddedInventory)}\n\n### Example Statblock (Removal):\n${this.buildStatBlock(this.health, removedInventory)}`) : '') +
+        return `### Example Statblock (Gaining an Item):\n${this.buildStatBlock(this.health, addedInventory)}` +
+            (moddedInventory.length > 0 ? (
+                `\n\n### Example Statblock (Modifying an Item):\n${this.buildStatBlock(this.health, moddedInventory)}` +
+                `\n\n### Example Statblock (Removal):\n${this.buildStatBlock(this.health, removedInventory)}`) : '') +
             `\n\n### Example Statblock (Health Loss):\n${this.buildStatBlock(this.health - 3, [...this.inventory, new Item('Gaping Wound', 'Some Stat', -2)])}` +
-            (this.health < this.maxHealth ? (`\n\n### Example Statblock (Health Gain):\n${this.buildStatBlock(this.health + 1, [...this.inventory, new Item('Cool Scar', 'Some Stat', 1)])}`) : '');
+            (this.health < this.maxHealth ? (
+                `\n\n### Example Statblock (Health Gain):\n${this.buildStatBlock(this.health + 1, [...this.inventory, new Item('Cool Scar', 'Some Stat', 1)])}`) : '');
     };
 
     buildStatBlock: (health: number, inventory: Item[]) => string = (health, inventory) => {
