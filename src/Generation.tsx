@@ -1,6 +1,7 @@
 import { Character } from "@chub-ai/stages-ts/dist/types/character";
 import { Stage } from "./Stage";
 import { Stat } from "./Stat";
+import { Item } from "./Item";
 
 function buildSection(name: string, body: string) {
     return `### ${name}:\n${body.trim()}\n\n`;
@@ -54,6 +55,7 @@ function buildStatPrompt(stage: Stage): string {
         '### Future Instruction:');
 }
 
+
 export async function generateStats(stage: Stage) {
 
     const statRegex = /^(?:\d+\.\s*)?\s*([\w\s]+)[-|:]\s*(.+)$/gm
@@ -85,3 +87,41 @@ export async function generateStats(stage: Stage) {
         console.log(stage.stats);    
     }
 }
+
+
+function buildSampleStatBlocks(stage: Stage) {
+    let addedInventory = [...stage.inventory];
+    let moddedInventory = [...stage.inventory];
+    let removedInventory = [...stage.inventory];
+    console.log(`length: ${stage.inventory.length}`);
+    
+    addedInventory.push(new Item('Newly Acquired Item', Object.values(Stat)[Math.floor(Math.random() * Object.values(Stat).length)], Math.floor(Math.random() * 5) - 2));
+    if (moddedInventory.length > 0) {
+        moddedInventory[0].bonus += 1;
+        removedInventory.slice(0, 1);
+    }
+    
+    return `### Example Statblock (Gaining an Item):\n${buildStatBlock(stage, stage.health, addedInventory)}` +
+        (moddedInventory.length > 0 ? (
+            `\n\n### Example Statblock (Modifying an Item):\n${buildStatBlock(stage, stage.health, moddedInventory)}` +
+            `\n\n### Example Statblock (Removal):\n${buildStatBlock(stage, stage.health, removedInventory)}`) : '') +
+        `\n\n### Example Statblock (Health Loss):\n${buildStatBlock(stage, stage.health - 3, [...stage.inventory, new Item('Gaping Wound', 'Some Stat', -2)])}` +
+        (stage.health < stage.maxHealth ? (
+            `\n\n### Example Statblock (Health Gain):\n${buildStatBlock(stage, stage.health + 1, [...stage.inventory, new Item('Cool Scar', 'Some Stat', 1)])}`) : '');
+    };
+    
+function buildStatBlock(stage: Stage, health: number, inventory: Item[]) {
+    return `---\n${stage.player.name} - Health: ${health}/${stage.maxHealth}\n${inventory.length > 0 ? inventory.map(item => item.print()).join(' ') : ''}`
+};
+
+export function buildResponsePrompt(stage: Stage, instruction: string) {
+    return `${buildSampleStatBlocks(stage)}\n\n` +
+            `### Stats:\n${Object.values(stage.stats).map(stat => `${stat.name} - ${stat.description}`)}\n\n` +
+            `### Current Instruction:\nThis response has two critical goals: first, narrate one or two paragraphs organically describing {{user}}'s actions and the reactions of the world around them; second, conclude the response with a formalized statblock.\n\n` +
+            `${instruction}\n\nEnd the response by functionally outputting the current statblock below, making logical updates, if needed, to implicitly reflect changes to {{user}}'s status, based on events in {{user}}'s input and this response: ` +
+            `updated health; newly acquired, lost, persistent, or modified equipment for {{user}}; and newly imposed, removed, continuous, or updated status effects that impact {{user}}'s stats. ` +
+            `In contrast with the initial, narrative portion of the response, which is illustrative and natural, the statblock is mechanical and formatted. ` +
+            `All listed equipment or status effects follow the same format, with a name, relevant stat (from the stats list), and modifier between -3 and +3, indicating a penalty (negative) or bonus (positive) toward the selected stat. ` +
+            `When adding or modifying items or status effects, choose a single stat and modifier that best illustrate the impact of that item or effect, and always follow this strict format: Name (Stat +/-x).\n\n` +
+            `### Current Statblock:\n${buildStatBlock(stage, stage.health, stage.inventory)}\n`;
+};
