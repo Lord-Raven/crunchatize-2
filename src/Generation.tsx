@@ -93,7 +93,7 @@ function buildSampleStatBlocks(stage: Stage) {
     let removedInventory = [...stage.inventory];
     console.log(`length: ${stage.inventory.length}`);
     
-    addedInventory.push(new Item('Newly Acquired Item', Object.values(Stat)[Math.floor(Math.random() * Object.values(Stat).length)], Math.floor(Math.random() * 5) - 2));
+    addedInventory.push(new Item('Newly Acquired Item', 'Some Stat', Math.floor(Math.random() * 5) - 2));
     if (moddedInventory.length > 0) {
         moddedInventory[0].bonus += 1;
         removedInventory.slice(0, 1);

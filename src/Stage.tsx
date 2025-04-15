@@ -228,11 +228,12 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             messageState: this.buildMessageState(),
             modifiedMessage: content,
             error: null,
-            systemMessage: `---\n\`\`\`` +
-                //`{{user}} - Level ${this.getLevel() + 1} (${this.experience}/${this.levelThresholds[this.getLevel()]})<br>` +
-                //`${Object.keys(Stat).map(key => `${key}: ${this.stats[key as Stat]}`).join(' | ')}<br>` +
-                `{{user}} - Health: ${this.health}/${this.maxHealth}<br>` +
-                `${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : ` `}\`\`\``,
+            systemMessage: `---\n\`\`\`\n` +
+                //`{{user}} - Level ${this.getLevel() + 1} (${this.experience}/${this.levelThresholds[this.getLevel()]})\n` +
+                //`${Object.keys(Stat).map(key => `${key}: ${this.stats[key as Stat]}`).join(' | ')}\n` +
+                `{{user}} - Health: ${this.health}/${this.maxHealth}\n` +
+                `${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : ` `}\n` +
+                `\`\`\``,
             chatState: null
         };
     }
