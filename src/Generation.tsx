@@ -147,11 +147,12 @@ export async function generateStatBlock(stage: Stage) {
     
 
     let tries = 3;
-    while (Object.values(stage.stats).length < 4 && tries > 0) {
+    let success = false;
+    while (!success && tries > 0) {
         let textResponse = await stage.generator.textGen({
             prompt: buildStatBlockPrompt(stage),
-            max_tokens: 250,
-            min_tokens: 100
+            max_tokens: 200,
+            min_tokens: 50
         });
         if (textResponse && textResponse.result) {
             
@@ -159,6 +160,7 @@ export async function generateStatBlock(stage: Stage) {
             const match = textResponse.result.match(statBlockPattern);
             
             if (match && match[1] && match[2] && match[4]) {
+                success = true;
                 console.log(`Found a stat block:`);
                 console.log(match);
                 stage.health = parseInt(match[2]);
@@ -186,6 +188,7 @@ export async function generateStatBlock(stage: Stage) {
                         } else {
                             console.log('Failed to parse an item; revert');
                             stage.inventory = previousInventory;
+                            success = false;
                             break;
                         }
                     }
@@ -195,7 +198,7 @@ export async function generateStatBlock(stage: Stage) {
         
         tries--;
     }
-    if (tries < 0) {
+    if (!success) {
         console.log('Failed to generate an updated statblock.');
     }
 
