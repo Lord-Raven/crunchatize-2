@@ -60,6 +60,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         this.player = users[Object.keys(users)[0]];
         this.characters = characters;
         this.setStateFromMessageState(messageState);
+        console.log(this.characters);
 
         if (chatState) {
             this.stats = {}; //chatState.stats;
