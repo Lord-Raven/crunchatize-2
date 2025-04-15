@@ -1,6 +1,5 @@
-import { Character } from "@chub-ai/stages-ts/dist/types/character";
 import { Stage } from "./Stage";
-import { Stat } from "./Stat";
+import { findMostSimilarStat, Stat } from "./Stat";
 import { Item } from "./Item";
 
 function buildSection(name: string, body: string) {
@@ -55,7 +54,6 @@ function buildStatPrompt(stage: Stage): string {
         '### Future Instruction:');
 }
 
-
 export async function generateStats(stage: Stage) {
 
     const statRegex = /^(?:\d+\.\s*)?\s*([\w\s]+)[-|:]\s*(.+)$/gm
@@ -101,13 +99,13 @@ function buildSampleStatBlocks(stage: Stage) {
         removedInventory.slice(0, 1);
     }
     
-    return `### Example Statblock (Gaining an Item):\n${buildStatBlock(stage, stage.health, addedInventory)}` +
+    return buildSection('Example Statblock (Gaining an Item)', buildStatBlock(stage, stage.health, addedInventory)) +
         (moddedInventory.length > 0 ? (
-            `\n\n### Example Statblock (Modifying an Item):\n${buildStatBlock(stage, stage.health, moddedInventory)}` +
-            `\n\n### Example Statblock (Removal):\n${buildStatBlock(stage, stage.health, removedInventory)}`) : '') +
-        `\n\n### Example Statblock (Health Loss):\n${buildStatBlock(stage, stage.health - 3, [...stage.inventory, new Item('Gaping Wound', 'Some Stat', -2)])}` +
+            buildSection('Example Statblock (Modifying an Item)', buildStatBlock(stage, stage.health, moddedInventory)) +
+            buildSection('Example Statblock (Removal)', buildStatBlock(stage, stage.health, removedInventory))) : '') +
+        buildSection('Example Statblock (Health Loss)', buildStatBlock(stage, stage.health - 3, [...stage.inventory, new Item('Gaping Wound', 'Some Stat', -2)])) +
         (stage.health < stage.maxHealth ? (
-            `\n\n### Example Statblock (Health Gain):\n${buildStatBlock(stage, stage.health + 1, [...stage.inventory, new Item('Cool Scar', 'Some Stat', 1)])}`) : '');
+            buildSection('Example Statblock (Health Gain)', buildStatBlock(stage, stage.health + 1, [...stage.inventory, new Item('Cool Scar', 'Some Stat', 1)]))) : '');
     };
     
 function buildStatBlock(stage: Stage, health: number, inventory: Item[]) {
@@ -115,13 +113,90 @@ function buildStatBlock(stage: Stage, health: number, inventory: Item[]) {
 };
 
 export function buildResponsePrompt(stage: Stage, instruction: string) {
-    return `${buildSampleStatBlocks(stage)}\n\n` +
-            `### Stats:\n${Object.values(stage.stats).map(stat => `${stat.name} - ${stat.description}`)}\n\n` +
-            `### Current Instruction:\nThis response has two critical goals: first, narrate one or two paragraphs organically describing {{user}}'s actions and the reactions of the world around them; second, conclude the response with a formalized statblock.\n\n` +
+    return buildSection('Current Instruction', `{{user}} has chosen the following action:\n${instruction}`);
+};
+
+export function buildResponsePromptCombined(stage: Stage, instruction: string) {
+    return buildSampleStatBlocks(stage) +
+            buildSection('Stats', Object.values(stage.stats).map(stat => `${stat.name} - ${stat.description}`).join('\n')) +
+            buildSection('Current Instruction', `This response has two critical goals: first, narrate one or two paragraphs organically describing {{user}}'s actions and the reactions of the world around them; second, conclude the response with a formalized statblock.\n\n` +
             `${instruction}\n\nEnd the response by functionally outputting the current statblock below, making logical updates, if needed, to implicitly reflect changes to {{user}}'s status, based on events in {{user}}'s input and this response: ` +
             `updated health; newly acquired, lost, persistent, or modified equipment for {{user}}; and newly imposed, removed, continuous, or updated status effects that impact {{user}}'s stats. ` +
             `In contrast with the initial, narrative portion of the response, which is illustrative and natural, the statblock is mechanical and formatted. ` +
             `All listed equipment or status effects follow the same format, with a name, relevant stat (from the stats list), and modifier between -3 and +3, indicating a penalty (negative) or bonus (positive) toward the selected stat. ` +
-            `When adding or modifying items or status effects, choose a single stat and modifier that best illustrate the impact of that item or effect, and always follow this strict format: Name (Stat +/-x).\n\n` +
-            `### Current Statblock:\n${buildStatBlock(stage, stage.health, stage.inventory)}\n`;
+            `When adding or modifying items or status effects, choose a single stat and modifier that best illustrate the impact of that item or effect, and always follow this strict format: Name (Stat +/-x).`) +
+            buildSection('Current Statblock', buildStatBlock(stage, stage.health, stage.inventory));
 };
+
+function buildStatBlockPrompt(stage: Stage) {
+    return  buildSampleStatBlocks(stage) +
+            buildSection('Stats', Object.values(stage.stats).map(stat => `${stat.name} - ${stat.description}`).join('\n')) +
+            buildSection('Previous Input', stage.lastInput) +
+            buildSection('Response', stage.lastResponse) +
+            buildSection('Current Statblock', buildStatBlock(stage, stage.health, stage.inventory)) +
+            buildSection('Current Instruction', `You are performing critical post-processing work for a roleplaying game. Instead of narrating, you will use this planning response to ` +
+            `output the current statblock, making logical updates, if needed, to implicitly reflect changes to {{user}}'s status, based on events in {{user}}'s input and this response: ` +
+            `updated health; newly acquired, lost, persistent, or modified equipment for {{user}}; and newly imposed, removed, continuous, or updated status effects that impact {{user}}'s stats. ` +
+            `In contrast with the initial, narrative portion of the response, which is illustrative and natural, the statblock is mechanical and formatted. ` +
+            `All listed equipment or status effects follow the same format, with a name, relevant stat (from the stats list), and modifier between -3 and +3, indicating a penalty (negative) or bonus (positive) toward the selected stat. ` +
+            `When adding or modifying items or status effects, choose a single stat and modifier that best illustrate the impact of that item or effect, and always follow this strict format: Name (Stat +/-x).\n\n` +
+            '### Future Instruction:');
+}
+
+export async function generateStatBlock(stage: Stage) {
+    
+
+    let tries = 3;
+    while (Object.values(stage.stats).length < 4 && tries > 0) {
+        let textResponse = await stage.generator.textGen({
+            prompt: buildStatBlockPrompt(stage),
+            max_tokens: 250,
+            min_tokens: 100
+        });
+        if (textResponse && textResponse.result) {
+            
+            const statBlockPattern = /(Health:\s*(\d+)\/(\d+))(.*)/s;
+            const match = textResponse.result.match(statBlockPattern);
+            
+            if (match && match[1] && match[2] && match[4]) {
+                console.log(`Found a stat block:`);
+                console.log(match);
+                stage.health = parseInt(match[2]);
+                stage.maxHealth = parseInt(match[3]);
+
+                // Clean up inventory:
+                const itemString = match[4].replace(/<br>|\\n|`/gs, ' ');
+                console.log(`Cleaned up inventory: ${itemString}`)
+                const previousInventory = [...stage.inventory];
+                stage.inventory = [];
+                const itemPattern = /([\w\s-]+)\s*\(([^)]+)\)/g;
+                let itemMatch;
+                while ((itemMatch = itemPattern.exec(itemString)) !== null) {
+                    console.log(itemMatch);
+                    if (itemMatch[1] && itemMatch[2]) {
+                        const name = itemMatch[1];
+                        const statFirst = itemMatch[2].match(/(\w+)\s*([+-]\d+)/);
+                        const statLast = itemMatch[2].match(/([+-]\d+)\s*(\w+)/);
+                        console.log(`${statFirst}\n${statLast}`);
+                        const bonus = statFirst ? parseInt(statFirst[2]) : (statLast ? parseInt(statLast[1]) : null);
+                        const stat = statFirst ? findMostSimilarStat(statFirst[1], stage.stats) : (statLast ? findMostSimilarStat(statLast[2], stage.stats) : null);
+                        if (name && stat && bonus) {
+                            console.log(`New item: ${name}, ${stat}, ${bonus}`);
+                            stage.inventory.push(new Item(name, stat.name, bonus));
+                        } else {
+                            console.log('Failed to parse an item; revert');
+                            stage.inventory = previousInventory;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        
+        tries--;
+    }
+    if (tries < 0) {
+        console.log('Failed to generate an updated statblock.');
+    }
+
+}

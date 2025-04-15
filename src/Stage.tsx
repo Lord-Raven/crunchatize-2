@@ -7,7 +7,7 @@ import {Item} from "./Item"
 import {Outcome, Result, ResultDescription} from "./Outcome";
 import {env, pipeline} from '@xenova/transformers';
 import {Client} from "@gradio/client";
-import { buildResponsePrompt, generateStats } from "./Generation";
+import { buildResponsePrompt, generateStatBlock, generateStats } from "./Generation";
 
 type MessageStateType = any;
 
@@ -38,6 +38,8 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     experience: number = 0;
     lastOutcome: Outcome|null = null;
     lastOutcomePrompt: string = '';
+    lastInput: string = '';
+    lastResponse: string = '';
 
             
 
@@ -60,7 +62,6 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         this.player = users[Object.keys(users)[0]];
         this.characters = characters;
         this.setStateFromMessageState(messageState);
-        console.log(this.characters);
 
         if (chatState) {
             this.stats = {}; //chatState.stats;
@@ -117,6 +118,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         let errorMessage: string|null = null;
         let takenAction: Action|null = null;
         let finalContent: string|undefined = content;
+        this.lastInput = content;
 
         if (Object.values(this.stats).length == 0) {
             console.log('Generate stats');
@@ -206,49 +208,6 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             content
         } = botMessage;
 
-        let statBlock = '';
-        
-
-        const statBlockPattern = /(Health:\s*(\d+)\/(\d+))(.*)/s;
-        const match = content.match(statBlockPattern);
-        
-        if (match) {
-            console.log(`Found a stat block: ${match}`);
-            if (match[1] && match[2]) {
-                console.log(`Found some health: ${match[1]}/${match[2]}`);
-                this.health = parseInt(match[2]);
-                this.maxHealth = parseInt(match[3]);
-            }
-            if (match[4]) {
-                console.log(`Found some inventory: ${match[4]}`);
-                // Clean it up:
-                const itemString = match[4].replace(/<br>|\\n|`/gs, ' ');
-                console.log(`Cleaned up inventory: ${itemString}`)
-                const previousInventory = [...this.inventory];
-                this.inventory = [];
-                const itemPattern = /([\w\s-]+)\s*\(([^)]+)\)/g;
-                let itemMatch;
-                while ((itemMatch = itemPattern.exec(itemString)) !== null) {
-                    console.log(itemMatch);
-                    if (itemMatch[1] && itemMatch[2]) {
-                        const name = itemMatch[1];
-                        const statFirst = itemMatch[2].match(/(\w+)\s*([+-]\d+)/);
-                        const statLast = itemMatch[2].match(/([+-]\d+)\s*(\w+)/);
-                        console.log(`${statFirst}\n${statLast}`);
-                        const bonus = statFirst ? parseInt(statFirst[2]) : (statLast ? parseInt(statLast[1]) : null);
-                        const stat = statFirst ? findMostSimilarStat(statFirst[1], this.stats) : (statLast ? findMostSimilarStat(statLast[2], this.stats) : null);
-                        if (name && stat && bonus) {
-                            console.log(`New item: ${name}, ${stat}, ${bonus}`);
-                            this.inventory.push(new Item(name, stat.name, bonus));
-                        } else {
-                            console.log('Failed to parse an item; revert');
-                            this.inventory = previousInventory;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
         // Remove initial --- from start of response (some LLMs like to do this):
         if (content.indexOf("---") == 0) {
             content = content.substring(3);
@@ -256,7 +215,11 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         // Remove content after --- (hopefully, it's a stat block)
         if (content.indexOf("---") > 0) {
             content = content.substring(0, content.indexOf("---")).trim(); 
-        }   
+        }
+
+        this.lastResponse = content;
+
+        await generateStatBlock(this);
 
         this.lastOutcomePrompt = '';
 
@@ -282,6 +245,8 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             this.health = messageState['health'] ?? 10;
             this.maxHealth = messageState['maxHealth'] ?? 10;
             this.inventory = [];
+            this.lastInput = messageState['lastInput'] ?? '';
+            this.lastResponse = messageState['lastResponse'] ?? '';
             for (let item of messageState['inventory'] ?? []) {
                 this.inventory.push(new Item(item.name, item.stat, item.bonus));
             }
@@ -297,19 +262,16 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     }
 
     buildMessageState(): any {
-        let messageState: {[key: string]: any} = {};
-        /*for (let stat in Stat) {
-            messageState[stat] = this.statScores[stat as Stat] ?? this.defaultStat;
-            messageState[`use_${stat}`] = this.statUses[stat as Stat] ?? 0;
-        }*/
-        messageState['lastOutcome'] = this.lastOutcome ?? null;
-        messageState['lastOutcomePrompt'] = this.lastOutcomePrompt ?? '';
-        messageState['experience'] = this.experience ?? 0;
-        messageState['health'] = this.health ?? 10;
-        messageState['maxHealth'] = this.maxHealth ?? 10;
-        messageState['inventory'] = this.inventory ?? [];
-
-        return messageState;
+        return {
+            lastOutcome: this.lastOutcome ?? null,
+            lastOutcomePrompt: this.lastOutcomePrompt ?? '',
+            lastInput: this.lastInput ?? '',
+            lastResponse: this.lastResponse ?? '',
+            experience: this.experience ?? 0,
+            health: this.health ?? 10,
+            maxHealth: this.maxHealth ?? 10,
+            inventory: this.inventory ?? []
+        };
     }
 
     setLastOutcome(outcome: Outcome|null) {
