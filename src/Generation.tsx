@@ -131,8 +131,8 @@ export function buildResponsePromptCombined(stage: Stage, instruction: string) {
 function buildStatBlockPrompt(stage: Stage) {
     return  buildSampleStatBlocks(stage) +
             buildSection('Stats', Object.values(stage.stats).map(stat => `${stat.name} - ${stat.description}`).join('\n')) +
-            buildSection('Previous Input', stage.lastInput) +
-            buildSection('Response', stage.lastResponse) +
+            buildSection('Input: {{user}}', stage.lastInput) +
+            buildSection('Response: {{char}}', stage.lastResponse) +
             buildSection('Current Statblock', buildStatBlock(stage, stage.health, stage.inventory)) +
             buildSection('Current Instruction', `You are performing critical post-processing work for a roleplaying game. Instead of narrating, you will use this planning response to ` +
             `output the current statblock, making logical updates, if needed, to implicitly reflect changes to {{user}}'s status, based on events in {{user}}'s input and this response: ` +
