@@ -117,6 +117,7 @@ export function buildResponsePrompt(stage: Stage, instruction: string) {
 };
 
 export function buildResponsePromptCombined(stage: Stage, instruction: string) {
+    console.log(stage.stats);
     return buildSampleStatBlocks(stage) +
             buildSection('Stats', Object.values(stage.stats).map(stat => `${stat.name} - ${stat.description}`).join('\n')) +
             buildSection('Current Instruction', `This response has two critical goals: first, narrate one or two paragraphs organically describing {{user}}'s actions and the reactions of the world around them; second, conclude the response with a formalized statblock.\n\n` +

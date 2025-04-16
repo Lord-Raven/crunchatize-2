@@ -64,7 +64,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         this.setStateFromMessageState(messageState);
 
         if (chatState) {
-            this.stats = {}; //chatState.stats;
+            this.stats = chatState.stats;
             console.log('Loaded stats from chatState:');
             console.log(this.stats);
         } else {
