@@ -51,7 +51,7 @@ function buildStatPrompt(stage: Stage): string {
             `These stats will be applied to other characters beyond those found in the FLAVOR TEXT, so they should suit a spectrum of activities. ` +
             `This essential, preparatory response includes four to eight lines, each following this format: "Name - Brief description of what the attribute governs, potentially including example actions that fall under this domain." ` +
             `Simply define these attributes and promptly end your response.\n`) +
-        '### Future Instruction:');
+        '### FUTURE INSTRUCTION:');
 }
 
 export async function generateStats(stage: Stage) {
@@ -130,8 +130,8 @@ export function buildResponsePromptCombined(stage: Stage, instruction: string) {
 };
 
 function buildStatBlockPrompt(stage: Stage) {
-    return  buildSampleStatBlocks(stage) +
-            buildSection('Stats', Object.values(stage.stats).map(stat => `${stat.name} - ${stat.description}`).join('\n')) +
+    return  buildSection('Stats', Object.values(stage.stats).map(stat => `${stat.name} - ${stat.description}`).join('\n')) +
+            buildSampleStatBlocks(stage) +
             buildSection('Input: {{user}}', stage.lastInput) +
             buildSection('Response: {{char}}', stage.lastResponse) +
             buildSection('Current Statblock', buildStatBlock(stage, stage.health, stage.inventory)) +
@@ -141,7 +141,7 @@ function buildStatBlockPrompt(stage: Stage) {
             `In contrast with the initial, narrative portion of the response, which is illustrative and natural, the statblock is mechanical and formatted. ` +
             `All listed equipment or status effects follow the same format, with a name, relevant stat (from the stats list), and modifier between -3 and +3, indicating a penalty (negative) or bonus (positive) toward the selected stat. ` +
             `When adding or modifying items or status effects, choose a single stat and modifier that best illustrate the impact of that item or effect, and always follow this strict format: Name (Stat +/-x).\n\n`) +
-            '### Future Instruction:';
+            '### FUTURE INSTRUCTION:';
 }
 
 export async function generateStatBlock(stage: Stage) {
