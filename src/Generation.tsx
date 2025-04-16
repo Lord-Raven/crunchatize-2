@@ -56,7 +56,7 @@ function buildStatPrompt(stage: Stage): string {
 
 export async function generateStats(stage: Stage) {
 
-    const statRegex = /^(?:\d+\.\s*)?\s*([\w\s]+)[-|:]\s*(.+)$/gm
+    const statRegex =   /^(?:\d+\.\s*)?\s*([\w\s-]+?)(?:[-:]\s)(.+)$/gm
     let tries = 3;
     while (Object.values(stage.stats).length < 4 && tries > 0) {
         let textResponse = await stage.generator.textGen({
@@ -140,7 +140,7 @@ function buildStatBlockPrompt(stage: Stage) {
             `updated health; newly acquired, lost, persistent, or modified equipment for {{user}}; and newly imposed, removed, continuous, or updated status effects that impact {{user}}'s stats. ` +
             `This responsorial statblock is unannotated, mechanical, and precicely structured. ` +
             `All listed equipment or status effects follow the same format, with a name, relevant stat (from the STATS list), and modifier between -3 and +3, indicating a penalty (negative) or bonus (positive) toward the selected stat. ` +
-            `When adding or modifying items or status effects, choose a single stat and modifier that best convey the impact that that item or effect might have on {{user}}'s stats when the story continues. ` +
+            `When adding or modifying items or status effects, choose a single stat and modifier that best convey the impact that that item or effect might have on {{user}}'s stats. ` +
             `Always employ this strict format for items and status effects: Name (Stat +/-x).\n\n`) +
             '### FUTURE INSTRUCTION:';
 }
