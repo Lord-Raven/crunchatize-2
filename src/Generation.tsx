@@ -99,13 +99,13 @@ function buildSampleStatBlocks(stage: Stage) {
         removedInventory.slice(0, 1);
     }
     
-    return buildSection('Example Statblock (Gaining an Item)', buildStatBlock(stage, stage.health, addedInventory)) +
+    return buildSection('Example Response (Gaining an Item)', buildStatBlock(stage, stage.health, addedInventory)) +
         (moddedInventory.length > 0 ? (
-            buildSection('Example Statblock (Modifying an Item)', buildStatBlock(stage, stage.health, moddedInventory)) +
-            buildSection('Example Statblock (Removal)', buildStatBlock(stage, stage.health, removedInventory))) : '') +
+            buildSection('Example Response (Modifying an Item)', buildStatBlock(stage, stage.health, moddedInventory)) +
+            buildSection('Example Response (Removal)', buildStatBlock(stage, stage.health, removedInventory))) : '') +
         buildSection('Example Statblock (Health Loss)', buildStatBlock(stage, stage.health - 3, [...stage.inventory, new Item('Gaping Wound', 'Some Stat', -2)])) +
         (stage.health < stage.maxHealth ? (
-            buildSection('Example Statblock (Health Gain)', buildStatBlock(stage, stage.health + 1, [...stage.inventory, new Item('Cool Scar', 'Some Stat', 1)]))) : '');
+            buildSection('Example Response (Health Gain)', buildStatBlock(stage, stage.health + 1, [...stage.inventory, new Item('Cool Scar', 'Some Stat', 1)]))) : '');
     };
     
 function buildStatBlock(stage: Stage, health: number, inventory: Item[]) {
@@ -136,17 +136,16 @@ function buildStatBlockPrompt(stage: Stage) {
             buildSection('Response: {{char}}', stage.lastResponse) +
             buildSection('Current Statblock', buildStatBlock(stage, stage.health, stage.inventory)) +
             buildSection('Current Instruction', `You are doing critical prep work for a roleplaying game. Instead of narrating, you will use this planning response to ` +
-            `output the current statblock, making logical updates, if needed, to implicitly reflect changes to {{user}}'s status, based on events in {{user}}'s input and this response: ` +
+            `output the CURRENT STATBLOCK, making logical updates, if needed, to implicitly reflect changes to {{user}}'s status, based on events in {{user}}'s input and {{char}}'s response: ` +
             `updated health; newly acquired, lost, persistent, or modified equipment for {{user}}; and newly imposed, removed, continuous, or updated status effects that impact {{user}}'s stats. ` +
-            `In contrast with the initial, narrative portion of the response, which is illustrative and natural, the statblock is mechanical and formatted. ` +
-            `All listed equipment or status effects follow the same format, with a name, relevant stat (from the stats list), and modifier between -3 and +3, indicating a penalty (negative) or bonus (positive) toward the selected stat. ` +
+            `This statblock is mechanical and formatted. ` +
+            `All listed equipment or status effects follow the same format, with a name, relevant stat (from the STATS list), and modifier between -3 and +3, indicating a penalty (negative) or bonus (positive) toward the selected stat. ` +
             `When adding or modifying items or status effects, choose a single stat and modifier that best illustrate the impact of that item or effect, and always follow this strict format: Name (Stat +/-x).\n\n`) +
             '### FUTURE INSTRUCTION:';
 }
 
 export async function generateStatBlock(stage: Stage) {
     
-
     let tries = 3;
     let success = false;
     while (!success && tries > 0) {
@@ -203,5 +202,4 @@ export async function generateStatBlock(stage: Stage) {
     if (!success) {
         console.log('Failed to generate an updated statblock.');
     }
-
 }
