@@ -139,8 +139,8 @@ function buildStatBlockPrompt(stage: Stage) {
             `updated health; newly acquired, lost, persistent, or modified equipment for {{user}}; and newly imposed, removed, continuous, or updated status effects that impact {{user}}'s stats. ` +
             `In contrast with the initial, narrative portion of the response, which is illustrative and natural, the statblock is mechanical and formatted. ` +
             `All listed equipment or status effects follow the same format, with a name, relevant stat (from the stats list), and modifier between -3 and +3, indicating a penalty (negative) or bonus (positive) toward the selected stat. ` +
-            `When adding or modifying items or status effects, choose a single stat and modifier that best illustrate the impact of that item or effect, and always follow this strict format: Name (Stat +/-x).\n\n` +
-            '### Future Instruction:');
+            `When adding or modifying items or status effects, choose a single stat and modifier that best illustrate the impact of that item or effect, and always follow this strict format: Name (Stat +/-x).\n\n`) +
+            '### Future Instruction:';
 }
 
 export async function generateStatBlock(stage: Stage) {
@@ -151,6 +151,7 @@ export async function generateStatBlock(stage: Stage) {
     while (!success && tries > 0) {
         let textResponse = await stage.generator.textGen({
             prompt: buildStatBlockPrompt(stage),
+
             max_tokens: 200,
             min_tokens: 50
         });
