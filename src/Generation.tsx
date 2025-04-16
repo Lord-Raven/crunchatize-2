@@ -3,7 +3,7 @@ import { findMostSimilarStat, Stat } from "./Stat";
 import { Item } from "./Item";
 
 function buildSection(name: string, body: string) {
-    return `### ${name}:\n${body.trim()}\n\n`;
+    return `### ${name.toUpperCase()}:\n${body.trim()}\n\n`;
 }
 
 function buildStatPrompt(stage: Stage): string {
