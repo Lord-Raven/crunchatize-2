@@ -279,7 +279,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         this.lastOutcome = outcome;
         this.lastOutcomePrompt = '';
         if (this.lastOutcome) {
-            this.lastOutcomePrompt += `For the narrative portion of the response, {{user}} has chosen the following action: ${this.lastOutcome.action.description}\n`;
+            this.lastOutcomePrompt += `{{user}} has dictated the following action: "${this.lastOutcome.action.description}"\n`;
             this.lastOutcomePrompt += `${ResultDescription[this.lastOutcome.result]}\n`
         }
     }

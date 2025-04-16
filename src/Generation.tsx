@@ -48,7 +48,7 @@ function buildStatPrompt(stage: Stage): string {
         buildSection('Current Instruction',
             `You are doing critical prep work for a new roleplaying game. Instead of narrating, you will first use this planning response to review the FLAVOR TEXT and invent four to eight comprehensive core attributes and their descriptions. ` +
             `Use the FLAVOR TEXT as inspirational material as you name and describe a handful of RPG attributes that suit the vibe of the setting, ensuring that each stat covers a distinct area of character development or gameplay. ` +
-            `These stats will be applied to other characters beyond those found in the FLAVOR TEXT, so they should suit a spectrum of activities. ` +
+            `These stats will be applied to other characters beyond those found in the FLAVOR TEXT, so they should suit a spectrum of strengths and activities. ` +
             `This essential, preparatory response includes four to eight lines, each following this format: "Name - Brief description of what the attribute governs, potentially including example actions that fall under this domain." ` +
             `Simply define these attributes and promptly end your response.\n`) +
         '### FUTURE INSTRUCTION:');
@@ -136,11 +136,12 @@ function buildStatBlockPrompt(stage: Stage) {
             buildSection('Response: {{char}}', stage.lastResponse) +
             buildSection('Current Statblock', buildStatBlock(stage, stage.health, stage.inventory)) +
             buildSection('Current Instruction', `You are doing critical prep work for a roleplaying game. Instead of narrating, you will use this planning response to ` +
-            `output the CURRENT STATBLOCK, making logical updates, if needed, to implicitly reflect changes to {{user}}'s status, based on events in {{user}}'s input and {{char}}'s response: ` +
+            `output the CURRENT STATBLOCK, making logical updates, if needed, to implicitly reflect changes to {{user}}'s status and inventory, based on events in {{user}}'s input and {{char}}'s response: ` +
             `updated health; newly acquired, lost, persistent, or modified equipment for {{user}}; and newly imposed, removed, continuous, or updated status effects that impact {{user}}'s stats. ` +
-            `This statblock is mechanical and formatted. ` +
+            `This responsorial statblock is unannotated, mechanical, and precicely structured. ` +
             `All listed equipment or status effects follow the same format, with a name, relevant stat (from the STATS list), and modifier between -3 and +3, indicating a penalty (negative) or bonus (positive) toward the selected stat. ` +
-            `When adding or modifying items or status effects, choose a single stat and modifier that best illustrate the impact of that item or effect, and always follow this strict format: Name (Stat +/-x).\n\n`) +
+            `When adding or modifying items or status effects, choose a single stat and modifier that best convey the impact that that item or effect might have on {{user}}'s stats when the story continues. ` +
+            `Always employ this strict format for items and status effects: Name (Stat +/-x).\n\n`) +
             '### FUTURE INSTRUCTION:';
 }
 
