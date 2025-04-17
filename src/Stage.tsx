@@ -129,7 +129,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             let sequence = this.replaceTags(content,
                 {"user": this.player.name, "char": promptForId ? this.characters[promptForId].name : ''});
 
-            const statMapping:{[key: string]: string} = Object.values(this.stats).reduce((acc, stat) => {acc[stat.name] = `${stat.name}. ${stat.description}`; return acc;}, {} as {[key: string]: string});
+            const statMapping:{[key: string]: string} = Object.values(this.stats).reduce((acc, stat) => {acc[stat.description] = `${stat.name}. ${stat.description}`; return acc;}, {} as {[key: string]: string});
             let topStat: Stat|null = null;
             const statHypothesis = `The narrator's actions or dialog relate to {}.`
             const statPromise = this.query({sequence: sequence, candidate_labels: Object.keys(statMapping), hypothesis_template: statHypothesis, multi_label: true });
@@ -153,6 +153,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             console.log(`Stat selected: ${(statResponse.scores[0] > 0.3 ? statMapping[statResponse.labels[0]] : 'None')}`);
             if (statResponse && statResponse.labels && statResponse.scores[0] > 0.3 && statMapping[statResponse.labels[0]] != 'None') {
                 topStat = this.stats[statMapping[statResponse.labels[0]]];
+                console.log(`topStat: ${topStat}`);
             }
 
             if (topStat && difficultyRating < 1000) {
