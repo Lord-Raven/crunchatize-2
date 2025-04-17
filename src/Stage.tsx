@@ -194,7 +194,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             modifiedMessage: finalContent,
             systemMessage: null,
             error: errorMessage,
-            chatState: null,
+            chatState: {stats: this.stats},
         };
     }
 
@@ -234,7 +234,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
                 `{{user}} - Health: ${this.health}/${this.maxHealth}\n` +
                 `${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : ` `}\n` +
                 `\`\`\``,
-            chatState: null
+            chatState: {stats: this.stats}
         };
     }
 
