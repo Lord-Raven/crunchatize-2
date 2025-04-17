@@ -70,7 +70,7 @@ export class Outcome {
 
     getDescription(): string {
         if (this.action.stat) {
-            return `###(${this.action.stat}) ${this.action.description}###\n#${this.getDieEmoji(this.dieResult1)} + ${this.getDieEmoji(this.dieResult2)}${this.getDifficultyColor(this.action.difficultyModifier)}<sup><sub><sup>(difficulty)</sup></sub></sup>` +
+            return `###(${this.action.stat.name}) ${this.action.description}###\n#${this.getDieEmoji(this.dieResult1)} + ${this.getDieEmoji(this.dieResult2)}${this.getDifficultyColor(this.action.difficultyModifier)}<sup><sub><sup>(difficulty)</sup></sub></sup>` +
                 Object.keys(this.action.skillModifiers).map(key => this.action.skillModifiers[key] > 0 ? 
                     ` + ${ResultSpan[Result.CompleteSuccess](`${this.action.skillModifiers[key]}`)}<sup><sub><sup>${key}</sup></sub></sup>` : 
                     (this.action.skillModifiers[key] < 0 ? ` - ${ResultSpan[Result.Failure](`${Math.abs(this.action.skillModifiers[key])}`)}<sup><sub><sup>${key}</sup></sub></sup>` : '')).join('') +

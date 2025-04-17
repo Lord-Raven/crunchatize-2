@@ -153,7 +153,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             console.log(`Stat selected: ${(statResponse.scores[0] > 0.3 ? statMapping[statResponse.labels[0]] : 'None')}`);
             if (statResponse && statResponse.labels && statResponse.scores[0] > 0.3 && statMapping[statResponse.labels[0]] != 'None') {
                 topStat = this.stats[statMapping[statResponse.labels[0]]];
-                console.log(`topStat: ${topStat}`);
+                console.log(`topStat: ${topStat.name}`);
             }
 
             if (topStat && difficultyRating < 1000) {
