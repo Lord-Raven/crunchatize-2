@@ -129,7 +129,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             let sequence = this.replaceTags(content,
                 {"user": this.player.name, "char": promptForId ? this.characters[promptForId].name : ''});
 
-            const statMapping:{[key: string]: string} = Object.values(this.stats).reduce((acc, stat) => {acc[stat.description] = `${stat.name}. ${stat.description}`; return acc;}, {} as {[key: string]: string});
+            const statMapping:{[key: string]: string} = Object.values(this.stats).reduce((acc, stat) => {acc[`${stat.name}. ${stat.description}`] = stat.name; return acc;}, {} as {[key: string]: string});
             let topStat: Stat|null = null;
             const statHypothesis = `The narrator's actions or dialog relate to {}.`
             const statPromise = this.query({sequence: sequence, candidate_labels: Object.keys(statMapping), hypothesis_template: statHypothesis, multi_label: true });
