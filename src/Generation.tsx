@@ -178,7 +178,7 @@ export async function generateStatBlock(stage: Stage) {
                 while ((itemMatch = itemPattern.exec(itemString)) !== null) {
                     console.log(itemMatch);
                     if (itemMatch[1] && itemMatch[2]) {
-                        const name = itemMatch[1];
+                        const name = itemMatch[1].trim();
                         const statFirst = itemMatch[2].match(/(\w+)\s*([+-]\d+)/);
                         const statLast = itemMatch[2].match(/([+-]\d+)\s*(\w+)/);
                         console.log(`${statFirst}\n${statLast}`);
