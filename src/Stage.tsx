@@ -253,7 +253,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             systemMessage: '---\n```\n' +
                 Object.values(this.users).map(user => {
                     let userState = this.getUserState(user.anonymizedId);
-                    return `${user.name} - ${userState.health}/${userState.maxHealth}\n` +
+                    return `${user.name} - Health: ${userState.health}/${userState.maxHealth}\n` +
                         `${userState.inventory.length > 0 ? userState.inventory.map(item => item.print()).join(' ') : ' '}\n`;
                 }).join('\n') +
                 '```',

@@ -62,7 +62,7 @@ export async function generateStats(stage: Stage) {
     while (Object.values(stage.stats).length < 4 && tries > 0) {
         let textResponse = await stage.generator.textGen({
             prompt: buildStatPrompt(stage),
-            max_tokens: 250,
+            max_tokens: 300,
             min_tokens: 100
         });
         if (textResponse && textResponse.result) {
@@ -113,9 +113,8 @@ export async function generateStats(stage: Stage) {
 };*/
     
 function buildStatBlock(stage: Stage) {
-    return '---\n```' +
-            Object.keys(stage.users).map(anonymizedId => buildUserState(stage.getUserState(anonymizedId))).join('\n') +
-            '```';
+    return '---\n' +
+            Object.keys(stage.users).map(anonymizedId => buildUserState(stage.getUserState(anonymizedId))).join('\n');
 };
 function buildUserState(userState: UserState) {
     return `${userState.name} - Health: ${userState.health}/${userState.maxHealth}\n${userState.inventory.map(item => item.print()).join(' ')}`;
