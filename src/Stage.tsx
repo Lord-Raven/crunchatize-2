@@ -140,6 +140,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         if (this.history.length > 10) {
             this.history.slice(this.history.length - 10);
         }
+        console.log(this.history);
         this.lastSpeaker = anonymizedId;
 
         if (Object.values(this.stats).length == 0) {
@@ -239,6 +240,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
 
         this.messenger.updateEnvironment({input_enabled: false});
         this.history.push(`### Response ${this.characters[anonymizedId].name}: ${content}`);
+        console.log(this.history);
         if (this.history.length > 10) {
             this.history.slice(this.history.length - 10);
         }
@@ -274,6 +276,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
 
     loadMessageState(messageState: MessageStateType) {
         if (messageState != null) {
+            console.log('loadMessageState');
             this.userStates = {...messageState.userStates};
             this.history = messageState.history ?? [];
             this.lastSpeaker = messageState.lastSpeaker ?? '';
