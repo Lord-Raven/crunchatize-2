@@ -130,11 +130,14 @@ function buildHistory(history: string[]) {
 }
 
 function buildStatBlockPrompt(stage: Stage, anonymizedId: string) {
+    let mainCharacters = Object.keys(stage.users).map(id => stage.users[id].name).join(', ')
     let affectedCharacters = `{{user}}'s`;
     if (Object.keys(stage.users).length > 1) {
         affectedCharacters += ` (and ${Object.keys(stage.users).filter(id => id != anonymizedId).map(id => stage.users[id].name).join(', ')})`;
     }
-    return  buildSection('Stats', Object.values(stage.stats).map(stat => `${stat.name} - ${stat.description}`).join('\n')) +
+    return  `This is a roleplaying narrative for which you will be methodically assessing and updating statblocks for the main characters: ${mainCharacters}. Each character has health and a list of significant items or status effects that benefit or penalize the STATS listed below.\n` +
+            buildSection('Stats', Object.values(stage.stats).map(stat => `${stat.name} - ${stat.description}`).join('\n')) +
+            buildSection('Sample Statblocks', buildSampleStatBlocks(stage)) +
             buildSection('Chat History', buildHistory(stage.history)) +
             buildSection('Current Statblock', buildStatBlock(stage, '', 0, null)) +
             buildSection('Current Instruction', `You are doing critical prep work for a roleplaying game. Instead of narrating, you will use this planning response to ` +
