@@ -113,7 +113,9 @@ function buildSampleStatBlocks(stage: Stage) {
     
 function buildStatBlock(stage: Stage, targetId: string, healthMod: number, inventoryOverride: Item[]|null) {
     return '---\n' +
-            Object.keys(stage.users).map(anonymizedId => buildUserState(stage.getUserState(anonymizedId), targetId == anonymizedId ? healthMod : 0, (inventoryOverride && targetId == anonymizedId) ? inventoryOverride : stage.userStates[anonymizedId].inventory)).join('\n');
+            Object.keys(stage.users).map(anonymizedId => buildUserState(stage.getUserState(anonymizedId), targetId == anonymizedId ? healthMod : 0, (inventoryOverride && targetId == anonymizedId) ? inventoryOverride : stage.userStates[anonymizedId].inventory)).join('\n') +
+            '\n---';
+            textResponse.result = textResponse.result.replaceAll('---', '\n---\n');
 };
 
 function buildUserState(userState: UserState, healthMod: number, inventory: Item[]) {
@@ -164,11 +166,16 @@ export async function generateStatBlock(stage: Stage) {
         });
         if (textResponse && textResponse.result) {
             let success = false;
+            textResponse.result = textResponse.result.replace(/\-\-\-/g, '\n---\n');
+            console.log(`Result: ${textResponse.result}`);
     
             const statBlocks: string[] = [];
             for (const line of textResponse.result.split("\n")) {
                 if (line.trim() === '') {
                     continue;
+                } else if (line.trim().includes("---")) {
+                    if (statBlocks.length == 0) continue;
+                    return;
                 } else if (line.includes(" - Health: ")) {
                     statBlocks.push(line);
                 } else if (statBlocks.length > 0) {
