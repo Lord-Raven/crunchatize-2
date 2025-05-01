@@ -1,6 +1,7 @@
 import { Stage, UserState } from "./Stage";
 import { findMostSimilarStat, Stat } from "./Stat";
 import { Item } from "./Item";
+import { Outcome, ResultDescription } from "./Outcome";
 
 function buildSection(name: string, body: string) {
     return `### ${name.toUpperCase()}:\n${body.trim()}\n\n`;
@@ -120,8 +121,8 @@ function buildUserState(userState: UserState, healthMod: number, inventory: Item
     return `${userState.name} - Health: ${userState.health + healthMod}/${userState.maxHealth}\n${inventory.map(item => item.print()).join(' ')}`;
 }
 
-export function buildResponsePrompt(stage: Stage, instruction: string) {
-    return buildSection('Current Instruction', `{{user}} has chosen the following action:\n${instruction}`);
+export function buildResponsePrompt(stage: Stage, outcome: Outcome) {
+    return buildSection('Current Instruction', `{{user}} has chosen the following action:\n${outcome.action}\n${ResultDescription[outcome.result]}`);
 };
 
 function buildHistory(history: string[]) {

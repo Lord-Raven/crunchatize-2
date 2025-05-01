@@ -134,7 +134,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         let inputString = content;
         let userState = this.getUserState(anonymizedId);
 
-        this.history.push(`### Input ${this.users[anonymizedId]}: ${content}`);
+        this.history.push(`### Input ${this.users[anonymizedId].name}: ${content}`);
         if (this.history.length > 10) {
             this.history.slice(this.history.length - 10);
         }
@@ -183,31 +183,29 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             }
         }
 
-        if (takenAction) {
-            const outcome = takenAction.determineSuccess();
-            finalContent = outcome.getDescription();
+        const outcome: Outcome = takenAction ? takenAction.determineSuccess() : new Outcome(0, 0, new Action(finalContent, null, 0, userState.inventory));
+        finalContent = outcome.getDescription();
 
-            if ([Result.Failure, Result.CriticalSuccess].includes(outcome.result)) {
-                userState.experience++;
-                let level = this.getLevel();
-                if (userState.experience == this.levelThresholds[level]) {
-                    /*const maxCount = Math.max(...Object.values(this.statUses));
-                    const maxStats = Object.keys(this.statUses)
-                            .filter((stat) => this.statUses[stat as Stat] === maxCount)
-                            .map((stat) => stat as Stat);
-                    let chosenStat = maxStats[Math.floor(Math.random() * maxStats.length)];
+        if ([Result.Failure, Result.CriticalSuccess].includes(outcome.result)) {
+            userState.experience++;
+            let level = this.getLevel();
+            if (userState.experience == this.levelThresholds[level]) {
+                /*const maxCount = Math.max(...Object.values(this.statUses));
+                const maxStats = Object.keys(this.statUses)
+                        .filter((stat) => this.statUses[stat as Stat] === maxCount)
+                        .map((stat) => stat as Stat);
+                let chosenStat = maxStats[Math.floor(Math.random() * maxStats.length)];
 
-                    finalContent += `\n##Welcome to level ${level + 2}!##\n#_${chosenStat}_ up!#`;
+                finalContent += `\n##Welcome to level ${level + 2}!##\n#_${chosenStat}_ up!#`;
 
-                    this.statUses = this.clearStatMap();*/
-                } else {
-                    finalContent += `\n###You've learned from this experience...###`
-                }
+                this.statUses = this.clearStatMap();*/
+            } else {
+                finalContent += `\n###You've learned from this experience...###`
             }
         }
 
         return {
-            stageDirections: `\n${this.replaceTags(buildResponsePrompt(this, inputString),{
+            stageDirections: `\n${this.replaceTags(buildResponsePrompt(this, outcome),{
                 "user": this.users[anonymizedId].name,
                 "char": promptForId ? this.characters[promptForId].name : ''
             })}\n`,
@@ -237,7 +235,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             content
         } = botMessage;
 
-        this.history.push(`### Response ${this.characters[anonymizedId]}: ${content}`);
+        this.history.push(`### Response ${this.characters[anonymizedId].name}: ${content}`);
         if (this.history.length > 10) {
             this.history.slice(this.history.length - 10);
         }
