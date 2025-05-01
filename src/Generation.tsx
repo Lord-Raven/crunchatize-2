@@ -181,19 +181,19 @@ export async function generateStatBlock(stage: Stage) {
             const match = textResponse.result.match(statBlockPattern);
             console.log(match);
 
-            if (match && match[1] && match[2] && match[3] && match[4] && match[5]) {
+            if (match && match[1] && match[2] && match[3] && match[4]) {
                 console.log(`Found a stat block:`);
                 console.log(match);
-                const anonymizedId = Object.keys(stage.userStates).find(anonymizedId => stage.userStates[anonymizedId].name == match[2])
+                const anonymizedId = Object.keys(stage.userStates).find(anonymizedId => stage.userStates[anonymizedId].name == match[1])
                 const userState: UserState = {...stage.getUserState(anonymizedId ?? '')} as UserState;
                 if (anonymizedId && userState.name != '') {
                     success = true;
                     console.log(`Matched a user: ${anonymizedId}/${userState.name}`);
-                    userState.health = parseInt(match[3]);
-                    userState.maxHealth = parseInt(match[4]);
+                    userState.health = parseInt(match[2]);
+                    userState.maxHealth = parseInt(match[3]);
 
                     // Clean up inventory:
-                    const itemString = match[5].replace(/<br>|\\n|`/gs, ' ');
+                    const itemString = match[4].replace(/<br>|\\n|`/gs, ' ');
                     console.log(`Cleaned up inventory: ${itemString}`)
                     const previousInventory = [...userState.inventory];
                     userState.inventory = [];
