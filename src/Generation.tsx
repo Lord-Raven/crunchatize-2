@@ -88,10 +88,9 @@ export async function generateStats(stage: Stage) {
 }
 
 
-/*function buildSampleStatBlocks(stage: Stage) {
-
-    
-    let userState = stage.getUserState(anonymizedId);
+function buildSampleStatBlocks(stage: Stage) {
+    const id = Object.keys(stage.users)[0];
+    let userState = stage.getUserState(id);
     let addedInventory = [...userState.inventory];
     let moddedInventory = [...userState.inventory];
     let removedInventory = [...userState.inventory];
@@ -103,34 +102,39 @@ export async function generateStats(stage: Stage) {
         removedInventory.slice(0, 1);
     }
     
-    return buildSection('Example Response (Gaining an Item)', buildStatBlock(stage, 0, addedInventory)) +
+    return buildSection('Example Response (Gaining an Item)', buildStatBlock(stage, id, 0, addedInventory)) +
         (moddedInventory.length > 0 ? (
-            buildSection('Example Response (Modifying an Item)', buildStatBlock(stage, 0, moddedInventory)) +
-            buildSection('Example Response (Removal)', buildStatBlock(stage, 0, removedInventory))) : '') +
-        buildSection('Example Statblock (Health Loss)', buildStatBlock(stage, -3, [...stage.inventory, new Item('Gaping Wound', 'Some Stat', -2)])) +
-        (stage.health < stage.maxHealth ? (
-            buildSection('Example Response (Health Gain)', buildStatBlock(stage, 1, [...stage.inventory, new Item('Cool Scar', 'Some Stat', 1)]))) : '');
-};*/
-    
-function buildStatBlock(stage: Stage) {
-    return '---\n' +
-            Object.keys(stage.users).map(anonymizedId => buildUserState(stage.getUserState(anonymizedId))).join('\n');
+            buildSection('Example Response (Modifying an Item)', buildStatBlock(stage, id, 0, moddedInventory)) +
+            buildSection('Example Response (Removal)', buildStatBlock(stage, id, 0, removedInventory))) : '') +
+        buildSection('Example Statblock (Health Loss)', buildStatBlock(stage, id, -3, [...userState.inventory, new Item('Gaping Wound', 'Some Stat', -2)])) +
+        (userState.health < userState.maxHealth ? (
+            buildSection('Example Response (Health Gain)', buildStatBlock(stage, id, 1, [...userState.inventory, new Item('Cool Scar', 'Some Stat', 1)]))) : '');
 };
-function buildUserState(userState: UserState) {
-    return `${userState.name} - Health: ${userState.health}/${userState.maxHealth}\n${userState.inventory.map(item => item.print()).join(' ')}`;
+    
+function buildStatBlock(stage: Stage, targetId: string, healthMod: number, inventoryOverride: Item[]|null) {
+    return '---\n' +
+            Object.keys(stage.users).map(anonymizedId => buildUserState(stage.getUserState(anonymizedId), targetId == anonymizedId ? healthMod : 0, (inventoryOverride && targetId == anonymizedId) ? inventoryOverride : stage.userStates[anonymizedId].inventory)).join('\n');
+};
+
+function buildUserState(userState: UserState, healthMod: number, inventory: Item[]) {
+    return `${userState.name} - Health: ${userState.health + healthMod}/${userState.maxHealth}\n${inventory.map(item => item.print()).join(' ')}`;
 }
 
 export function buildResponsePrompt(stage: Stage, instruction: string) {
     return buildSection('Current Instruction', `{{user}} has chosen the following action:\n${instruction}`);
 };
 
-function buildStatBlockPrompt(stage: Stage) {
+function buildStatBlockPrompt(stage: Stage, anonymizedId: string) {
+    let affectedCharacters = `{{user}}'s`;
+    if (Object.keys(stage.users).length > 1) {
+        affectedCharacters += ` (and ${Object.keys(stage.users).filter(id => id != anonymizedId).map(id => stage.users[id].name).join(', ')})`;
+    }
     return  buildSection('Stats', Object.values(stage.stats).map(stat => `${stat.name} - ${stat.description}`).join('\n')) +
             buildSection('Input: {{user}}', stage.lastInput) +
             buildSection('Response: {{char}}', stage.lastResponse) +
-            buildSection('Current Statblock', buildStatBlock(stage)) +
+            buildSection('Current Statblock', buildStatBlock(stage, '', 0, null)) +
             buildSection('Current Instruction', `You are doing critical prep work for a roleplaying game. Instead of narrating, you will use this planning response to ` +
-            `output the CURRENT STATBLOCK, making logical updates--if needed--to implicitly reflect changes to {{user}}'s (and other listed characters') status and inventory, based on events in {{user}}'s input and {{char}}'s response: ` +
+            `output the CURRENT STATBLOCK, making logical updates--if needed--to implicitly reflect changes to ${affectedCharacters} status and inventory, based on events in {{user}}'s input and {{char}}'s response: ` +
             `updated health; newly acquired, lost, persistent, or modified equipment for {{user}}; and newly imposed, removed, continuous, or updated status effects that impact {{user}}'s stats. ` +
             `This responsorial statblock is unannotated, mechanical, and precicely structured. ` +
             `All listed equipment or status effects follow the same format, with a name, relevant stat (from the STATS list), and modifier between -3 and +3, indicating a penalty (negative) or bonus (positive) toward the selected stat. ` +
@@ -145,7 +149,7 @@ export async function generateStatBlock(stage: Stage) {
     let success = false;
     while (!success && tries > 0) {
         let textResponse = await stage.generator.textGen({
-            prompt: buildStatBlockPrompt(stage),
+            prompt: buildStatBlockPrompt(stage, stage.lastSpeaker),
 
             max_tokens: 100 + (200 * Object.keys(stage.users).length),
             min_tokens: 50

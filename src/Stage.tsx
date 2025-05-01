@@ -47,6 +47,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     stats: {[key: string]: Stat};
     lastInput: string;
     lastResponse: string;
+    lastSpeaker: string;
 
     // message-level variables
     userStates: {[key: string]: UserState} = {};
@@ -73,6 +74,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         this.characters = characters;
         this.lastInput = '';
         this.lastResponse = '';
+        this.lastSpeaker = '';
         this.loadMessageState(messageState);
 
         if (chatState) {
@@ -135,6 +137,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         let userState = this.getUserState(anonymizedId);
 
         this.lastInput = content;
+        this.lastSpeaker = anonymizedId;
 
         if (Object.values(this.stats).length == 0) {
             console.log('Generate stats');
@@ -266,13 +269,15 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             this.userStates = {...messageState.userStates};
             this.lastInput = messageState.lastInput ?? '';
             this.lastResponse = messageState.lastResponse ?? '';
+            this.lastSpeaker = messageState.lastSpeaker ?? '';
         }
     }
 
     buildMessageState(): any {
         return {userStates: {...this.userStates},
                 lastInput: this.lastInput,
-                lastResponse: this.lastResponse};
+                lastResponse: this.lastResponse,
+                lastSpeaker: this.lastSpeaker};
         /*    lastOutcome: this.lastOutcome ?? null,
             lastOutcomePrompt: this.lastOutcomePrompt ?? '',
             lastInput: this.lastInput ?? '',
