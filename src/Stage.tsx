@@ -45,11 +45,11 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
 
     // chat-level variables
     stats: {[key: string]: Stat};
-    history: string[];
-    lastSpeaker: string;
 
     // message-level variables
     userStates: {[key: string]: UserState} = {};
+    history: string[];
+    lastSpeaker: string;
 
     // other
     client: any;
@@ -118,6 +118,8 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     }
 
     async setState(state: MessageStateType): Promise<void> {
+        console.log('setState()');
+        console.log(state);
         this.loadMessageState(state);
     }
 
