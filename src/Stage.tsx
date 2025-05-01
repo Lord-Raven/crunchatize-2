@@ -203,7 +203,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
 
                 this.statUses = this.clearStatMap();*/
             } else {
-                finalContent += `\n###You've learned from this experience...###`
+                finalContent += `\n###${userState.name} has learned from this experience.###`
             }
         }
 
