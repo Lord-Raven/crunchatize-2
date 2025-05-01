@@ -115,7 +115,6 @@ function buildStatBlock(stage: Stage, targetId: string, healthMod: number, inven
     return '---\n' +
             Object.keys(stage.users).map(anonymizedId => buildUserState(stage.getUserState(anonymizedId), targetId == anonymizedId ? healthMod : 0, (inventoryOverride && targetId == anonymizedId) ? inventoryOverride : stage.userStates[anonymizedId].inventory)).join('\n') +
             '\n---';
-            textResponse.result = textResponse.result.replaceAll('---', '\n---\n');
 };
 
 function buildUserState(userState: UserState, healthMod: number, inventory: Item[]) {
