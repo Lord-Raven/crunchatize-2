@@ -1,4 +1,4 @@
-import { Stage } from "./Stage";
+import { Stage, UserState } from "./Stage";
 import { findMostSimilarStat, Stat } from "./Stat";
 import { Item } from "./Item";
 
@@ -7,9 +7,10 @@ function buildSection(name: string, body: string) {
 }
 
 function buildStatPrompt(stage: Stage): string {
+    const baseUser = Object.values(stage.users)[0];
     const baseCharacter = Object.values(stage.characters)[0];
     return (
-        buildSection('FLAVOR TEXT', stage.replaceTags((baseCharacter.personality + ' ' + baseCharacter.description + '\n' + baseCharacter.scenario), {user: stage.player.name, char: baseCharacter.name})) +
+        buildSection('FLAVOR TEXT', stage.replaceTags((baseCharacter.personality + ' ' + baseCharacter.description + '\n' + baseCharacter.scenario), {user: baseUser.name, char: baseCharacter.name})) +
         buildSection('Example Response', '\n' +
             `Might - Physical power and endurance. Smash, lift, weather, intimidate\n` +
             `Grace - Agility and composure. Dodge, balance, dance, land\n` +
@@ -87,11 +88,14 @@ export async function generateStats(stage: Stage) {
 }
 
 
-function buildSampleStatBlocks(stage: Stage) {
-    let addedInventory = [...stage.inventory];
-    let moddedInventory = [...stage.inventory];
-    let removedInventory = [...stage.inventory];
-    console.log(`length: ${stage.inventory.length}`);
+/*function buildSampleStatBlocks(stage: Stage) {
+
+    
+    let userState = stage.getUserState(anonymizedId);
+    let addedInventory = [...userState.inventory];
+    let moddedInventory = [...userState.inventory];
+    let removedInventory = [...userState.inventory];
+    console.log(`length: ${userState.inventory.length}`);
     
     addedInventory.push(new Item('Newly Acquired Item', 'Some Stat', Math.floor(Math.random() * 5) - 2));
     if (moddedInventory.length > 0) {
@@ -99,44 +103,35 @@ function buildSampleStatBlocks(stage: Stage) {
         removedInventory.slice(0, 1);
     }
     
-    return buildSection('Example Response (Gaining an Item)', buildStatBlock(stage, stage.health, addedInventory)) +
+    return buildSection('Example Response (Gaining an Item)', buildStatBlock(stage, 0, addedInventory)) +
         (moddedInventory.length > 0 ? (
-            buildSection('Example Response (Modifying an Item)', buildStatBlock(stage, stage.health, moddedInventory)) +
-            buildSection('Example Response (Removal)', buildStatBlock(stage, stage.health, removedInventory))) : '') +
-        buildSection('Example Statblock (Health Loss)', buildStatBlock(stage, stage.health - 3, [...stage.inventory, new Item('Gaping Wound', 'Some Stat', -2)])) +
+            buildSection('Example Response (Modifying an Item)', buildStatBlock(stage, 0, moddedInventory)) +
+            buildSection('Example Response (Removal)', buildStatBlock(stage, 0, removedInventory))) : '') +
+        buildSection('Example Statblock (Health Loss)', buildStatBlock(stage, -3, [...stage.inventory, new Item('Gaping Wound', 'Some Stat', -2)])) +
         (stage.health < stage.maxHealth ? (
-            buildSection('Example Response (Health Gain)', buildStatBlock(stage, stage.health + 1, [...stage.inventory, new Item('Cool Scar', 'Some Stat', 1)]))) : '');
-    };
+            buildSection('Example Response (Health Gain)', buildStatBlock(stage, 1, [...stage.inventory, new Item('Cool Scar', 'Some Stat', 1)]))) : '');
+};*/
     
-function buildStatBlock(stage: Stage, health: number, inventory: Item[]) {
-    return `---\n${stage.player.name} - Health: ${health}/${stage.maxHealth}\n${inventory.length > 0 ? inventory.map(item => item.print()).join(' ') : ''}`
+function buildStatBlock(stage: Stage) {
+    return '---\n```' +
+            Object.keys(stage.users).map(anonymizedId => buildUserState(stage.getUserState(anonymizedId))).join('\n') +
+            '```';
 };
+function buildUserState(userState: UserState) {
+    return `${userState.name} - Health: ${userState.health}/${userState.maxHealth}\n${userState.inventory.map(item => item.print()).join(' ')}`;
+}
 
 export function buildResponsePrompt(stage: Stage, instruction: string) {
     return buildSection('Current Instruction', `{{user}} has chosen the following action:\n${instruction}`);
 };
 
-export function buildResponsePromptCombined(stage: Stage, instruction: string) {
-    console.log(stage.stats);
-    return buildSampleStatBlocks(stage) +
-            buildSection('Stats', Object.values(stage.stats).map(stat => `${stat.name} - ${stat.description}`).join('\n')) +
-            buildSection('Current Instruction', `This response has two critical goals: first, narrate one or two paragraphs organically describing {{user}}'s actions and the reactions of the world around them; second, conclude the response with a formalized statblock.\n\n` +
-            `${instruction}\n\nEnd the response by functionally outputting the current statblock below, making logical updates, if needed, to implicitly reflect changes to {{user}}'s status, based on events in {{user}}'s input and this response: ` +
-            `updated health; newly acquired, lost, persistent, or modified equipment for {{user}}; and newly imposed, removed, continuous, or updated status effects that impact {{user}}'s stats. ` +
-            `In contrast with the initial, narrative portion of the response, which is illustrative and natural, the statblock is mechanical and formatted. ` +
-            `All listed equipment or status effects follow the same format, with a name, relevant stat (from the stats list), and modifier between -3 and +3, indicating a penalty (negative) or bonus (positive) toward the selected stat. ` +
-            `When adding or modifying items or status effects, choose a single stat and modifier that best illustrate the impact of that item or effect, and always follow this strict format: Name (Stat +/-x).`) +
-            buildSection('Current Statblock', buildStatBlock(stage, stage.health, stage.inventory));
-};
-
 function buildStatBlockPrompt(stage: Stage) {
     return  buildSection('Stats', Object.values(stage.stats).map(stat => `${stat.name} - ${stat.description}`).join('\n')) +
-            buildSampleStatBlocks(stage) +
             buildSection('Input: {{user}}', stage.lastInput) +
             buildSection('Response: {{char}}', stage.lastResponse) +
-            buildSection('Current Statblock', buildStatBlock(stage, stage.health, stage.inventory)) +
+            buildSection('Current Statblock', buildStatBlock(stage)) +
             buildSection('Current Instruction', `You are doing critical prep work for a roleplaying game. Instead of narrating, you will use this planning response to ` +
-            `output the CURRENT STATBLOCK, making logical updates, if needed, to implicitly reflect changes to {{user}}'s status and inventory, based on events in {{user}}'s input and {{char}}'s response: ` +
+            `output the CURRENT STATBLOCK, making logical updates--if needed--to implicitly reflect changes to {{user}}'s (and other listed characters') status and inventory, based on events in {{user}}'s input and {{char}}'s response: ` +
             `updated health; newly acquired, lost, persistent, or modified equipment for {{user}}; and newly imposed, removed, continuous, or updated status effects that impact {{user}}'s stats. ` +
             `This responsorial statblock is unannotated, mechanical, and precicely structured. ` +
             `All listed equipment or status effects follow the same format, with a name, relevant stat (from the STATS list), and modifier between -3 and +3, indicating a penalty (negative) or bonus (positive) toward the selected stat. ` +
@@ -153,46 +148,66 @@ export async function generateStatBlock(stage: Stage) {
         let textResponse = await stage.generator.textGen({
             prompt: buildStatBlockPrompt(stage),
 
-            max_tokens: 200,
+            max_tokens: 100 + (200 * Object.keys(stage.users).length),
             min_tokens: 50
         });
         if (textResponse && textResponse.result) {
-            
-            const statBlockPattern = /(Health:\s*(\d+)\/(\d+))(.*)/s;
+
+            const statBlocks: string[] = [];
+            for (const line of textResponse.result.split("\n")) {
+                if (line.trim() === '') {
+                    continue;
+                } else if (line.includes(" - Health: ")) {
+                    statBlocks.push(line);
+                } else if (statBlocks.length > 0) {
+                    statBlocks[statBlocks.length - 1] = statBlocks[statBlocks.length - 1] + '\n' + line;
+                }
+            }
+            console.log(statBlocks);
+
+            const statBlockPattern = /^(.+?) - Health:\s*(\d+)\/(\d+)\s*(.*)/s;
             const match = textResponse.result.match(statBlockPattern);
             
-            if (match && match[1] && match[2] && match[4]) {
-                success = true;
+            if (match && match[1] && match[2] && match[3] && match[4] && match[5]) {
                 console.log(`Found a stat block:`);
                 console.log(match);
-                stage.health = parseInt(match[2]);
-                stage.maxHealth = parseInt(match[3]);
+                const anonymizedId = Object.keys(stage.userStates).find(anonymizedId => stage.userStates[anonymizedId].name == match[2])
+                const userState: UserState = {...stage.getUserState(anonymizedId ?? '')} as UserState;
+                if (anonymizedId && userState.name != '') {
+                    success = true;
+                    console.log(`Matched a user: ${anonymizedId}/${userState.name}`);
+                    userState.health = parseInt(match[3]);
+                    userState.maxHealth = parseInt(match[4]);
 
-                // Clean up inventory:
-                const itemString = match[4].replace(/<br>|\\n|`/gs, ' ');
-                console.log(`Cleaned up inventory: ${itemString}`)
-                const previousInventory = [...stage.inventory];
-                stage.inventory = [];
-                const itemPattern = /([\w\s-]+)\s*\(([^)]+)\)/g;
-                let itemMatch;
-                while ((itemMatch = itemPattern.exec(itemString)) !== null) {
-                    console.log(itemMatch);
-                    if (itemMatch[1] && itemMatch[2]) {
-                        const name = itemMatch[1].trim();
-                        const statFirst = itemMatch[2].match(/(\w+)\s*([+-]\d+)/);
-                        const statLast = itemMatch[2].match(/([+-]\d+)\s*(\w+)/);
-                        console.log(`${statFirst}\n${statLast}`);
-                        const bonus = statFirst ? parseInt(statFirst[2]) : (statLast ? parseInt(statLast[1]) : null);
-                        const stat = statFirst ? findMostSimilarStat(statFirst[1], stage.stats) : (statLast ? findMostSimilarStat(statLast[2], stage.stats) : null);
-                        if (name && stat && bonus) {
-                            console.log(`New item: ${name}, ${stat}, ${bonus}`);
-                            stage.inventory.push(new Item(name, stat.name, bonus));
-                        } else {
-                            console.log('Failed to parse an item; revert');
-                            stage.inventory = previousInventory;
-                            success = false;
-                            break;
+                    // Clean up inventory:
+                    const itemString = match[5].replace(/<br>|\\n|`/gs, ' ');
+                    console.log(`Cleaned up inventory: ${itemString}`)
+                    const previousInventory = [...userState.inventory];
+                    userState.inventory = [];
+                    const itemPattern = /([\w\s-]+)\s*\(([^)]+)\)/g;
+                    let itemMatch;
+                    while ((itemMatch = itemPattern.exec(itemString)) !== null) {
+                        console.log(itemMatch);
+                        if (itemMatch[1] && itemMatch[2]) {
+                            const name = itemMatch[1].trim();
+                            const statFirst = itemMatch[2].match(/(\w+)\s*([+-]\d+)/);
+                            const statLast = itemMatch[2].match(/([+-]\d+)\s*(\w+)/);
+                            console.log(`${statFirst}\n${statLast}`);
+                            const bonus = statFirst ? parseInt(statFirst[2]) : (statLast ? parseInt(statLast[1]) : null);
+                            const stat = statFirst ? findMostSimilarStat(statFirst[1], stage.stats) : (statLast ? findMostSimilarStat(statLast[2], stage.stats) : null);
+                            if (name && stat && bonus) {
+                                console.log(`New item: ${name}, ${stat}, ${bonus}`);
+                                userState.inventory.push(new Item(name, stat.name, bonus));
+                            } else {
+                                console.log('Failed to parse an item; revert');
+                                userState.inventory = previousInventory;
+                                success = false;
+                                break;
+                            }
                         }
+                    }
+                    if (success) {
+                        stage.userStates[anonymizedId] = userState;
                     }
                 }
             }

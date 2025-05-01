@@ -23,32 +23,40 @@ type ChatStateType = any;
   yarn dev --host --mode staging
 */
 
+export interface UserState {
+    name: string;
+    maxHealth: number;
+    health: number;
+    inventory: Item[];
+    experience: number;
+}
+
 export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateType, ConfigType> {
     
     readonly defaultStat: number = 0;
     readonly levelThresholds: number[] = [2, 5, 8, 12, 16, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100];
+    readonly defaultUserState: UserState = {
+        name: '',
+        maxHealth: 10,
+        health: 10,
+        inventory: [],
+        experience: 0,
+    }
 
     // chat-level variables
     stats: {[key: string]: Stat};
+    lastInput: string;
+    lastResponse: string;
 
     // message-level variables
-    maxHealth: number = 10;
-    health: number = 10;
-    inventory: Item[] = [];
-    experience: number = 0;
-    lastOutcome: Outcome|null = null;
-    lastOutcomePrompt: string = '';
-    lastInput: string = '';
-    lastResponse: string = '';
-
-            
+    userStates: {[key: string]: UserState} = {};
 
     // other
     client: any;
     fallbackPipelinePromise: Promise<any> | null = null;
     fallbackPipeline: any = null;
     fallbackMode: boolean;
-    player: User;
+    users: {[key: string]: User};
     characters: {[key: string]: Character};
 
     constructor(data: InitialData<InitStateType, ChatStateType, MessageStateType, ConfigType>) {
@@ -59,10 +67,13 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             messageState,
             chatState
         } = data;
+        console.log(users);
         console.log(characters);
-        this.player = users[Object.keys(users)[0]];
+        this.users = users;
         this.characters = characters;
-        this.setStateFromMessageState(messageState);
+        this.lastInput = '';
+        this.lastResponse = '';
+        this.loadMessageState(messageState);
 
         if (chatState) {
             this.stats = chatState.stats;
@@ -107,11 +118,12 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     }
 
     async setState(state: MessageStateType): Promise<void> {
-        this.setStateFromMessageState(state);
+        this.loadMessageState(state);
     }
 
     async beforePrompt(userMessage: Message): Promise<Partial<StageResponse<ChatStateType, MessageStateType>>> {
         const {
+            anonymizedId,
             content,
             promptForId
         } = userMessage;
@@ -119,6 +131,9 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         let errorMessage: string|null = null;
         let takenAction: Action|null = null;
         let finalContent: string|undefined = content;
+        let inputString = content;
+        let userState = this.getUserState(anonymizedId);
+
         this.lastInput = content;
 
         if (Object.values(this.stats).length == 0) {
@@ -128,7 +143,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
 
         if (finalContent) {
             let sequence = this.replaceTags(content,
-                {"user": this.player.name, "char": promptForId ? this.characters[promptForId].name : ''});
+                {"user": this.users[anonymizedId].name, "char": promptForId ? this.characters[promptForId].name : ''});
 
             const statMapping:{[key: string]: string} = Object.values(this.stats).reduce((acc, stat) => {acc[`${stat.name}: ${stat.description}`] = stat.name; return acc;}, {} as {[key: string]: string});
             let topStat: Stat|null = null;
@@ -151,27 +166,27 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             }
 
             let statResponse = await statPromise;
-            console.log(`Stat selected: ${(statResponse.scores[0] > 0.3 ? statMapping[statResponse.labels[0]] : 'None')}`);
-            if (statResponse && statResponse.labels && statResponse.scores[0] > 0.3 && statMapping[statResponse.labels[0]] != 'None') {
+            console.log(`Stat selected: ${(statResponse.scores[0] > 0.1 ? statMapping[statResponse.labels[0]] : 'None')}`);
+            if (statResponse && statResponse.labels && statResponse.scores[0] > 0.1 && statMapping[statResponse.labels[0]] != 'None') {
                 topStat = this.stats[statMapping[statResponse.labels[0]]];
                 console.log(`topStat: ${topStat.name}`);
             }
 
             if (topStat && difficultyRating < 1000) {
-                takenAction = new Action(finalContent, topStat, difficultyRating, this.inventory);
+                takenAction = new Action(finalContent, topStat, difficultyRating, userState.inventory);
             } else {
-                takenAction = new Action(finalContent, null, 0, this.inventory);
+                takenAction = new Action(finalContent, null, 0, userState.inventory);
             }
         }
 
         if (takenAction) {
-            this.setLastOutcome(takenAction.determineSuccess());
-            finalContent = this.lastOutcome?.getDescription();
+            const outcome = takenAction.determineSuccess();
+            finalContent = outcome.getDescription();
 
-            if (this.lastOutcome && [Result.Failure, Result.CriticalSuccess].includes(this.lastOutcome.result)) {
-                this.experience++;
+            if ([Result.Failure, Result.CriticalSuccess].includes(outcome.result)) {
+                userState.experience++;
                 let level = this.getLevel();
-                if (this.experience == this.levelThresholds[level]) {
+                if (userState.experience == this.levelThresholds[level]) {
                     /*const maxCount = Math.max(...Object.values(this.statUses));
                     const maxStats = Object.keys(this.statUses)
                             .filter((stat) => this.statUses[stat as Stat] === maxCount)
@@ -188,8 +203,8 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         }
 
         return {
-            stageDirections: `\n${this.replaceTags(buildResponsePrompt(this, this.lastOutcomePrompt),{
-                "user": this.player.name,
+            stageDirections: `\n${this.replaceTags(buildResponsePrompt(this, inputString),{
+                "user": this.users[anonymizedId].name,
                 "char": promptForId ? this.characters[promptForId].name : ''
             })}\n`,
             messageState: this.buildMessageState(),
@@ -198,6 +213,13 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             error: errorMessage,
             chatState: {stats: this.stats},
         };
+    }
+
+    getUserState(anonymizedId: string): UserState {
+        if (!this.userStates[anonymizedId] && anonymizedId.trim() != '') {
+            this.userStates[anonymizedId] = {...this.defaultUserState, name: this.users[anonymizedId].name};
+        }
+        return this.userStates[anonymizedId] ?? this.defaultUserState;
     }
 
     getLevel(): number {
@@ -210,6 +232,8 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             content
         } = botMessage;
 
+        this.lastResponse = content;
+
         // Remove initial --- from start of response (some LLMs like to do this):
         if (content.indexOf("---") == 0) {
             content = content.substring(3);
@@ -219,41 +243,45 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             content = content.substring(0, content.indexOf("---")).trim(); 
         }
 
-        this.lastResponse = content;
-
         await generateStatBlock(this);
-
-        this.lastOutcomePrompt = '';
 
         return {
             stageDirections: null,
             messageState: this.buildMessageState(),
             modifiedMessage: content,
             error: null,
-            systemMessage: `---\n\`\`\`\n` +
-                //`{{user}} - Level ${this.getLevel() + 1} (${this.experience}/${this.levelThresholds[this.getLevel()]})\n` +
-                //`${Object.keys(Stat).map(key => `${key}: ${this.stats[key as Stat]}`).join(' | ')}\n` +
-                `{{user}} - Health: ${this.health}/${this.maxHealth}\n` +
-                `${this.inventory.length > 0 ? this.inventory.map(item => item.print()).join(' ') : ` `}\n` +
-                `\`\`\``,
+            systemMessage: '---\n```\n' +
+                Object.values(this.users).map(user => {
+                    let userState = this.getUserState(user.anonymizedId);
+                    return `${user.name} - ${userState.health}/${userState.maxHealth}\n` +
+                        `${userState.inventory.length > 0 ? userState.inventory.map(item => item.print()).join(' ') : ' '}\n`;
+                }).join('\n') +
+                '```',
             chatState: {stats: this.stats}
         };
     }
 
-    setStateFromMessageState(messageState: MessageStateType) {
+    loadMessageState(messageState: MessageStateType) {
         if (messageState != null) {
-            this.lastOutcome = messageState['lastOutcome'] ? this.convertOutcome(messageState['lastOutcome']) : null;
-            this.lastOutcomePrompt = messageState['lastOutcomePrompt'] ?? '';
-            this.experience = messageState['experience'] ?? 0;
-            this.health = messageState['health'] ?? 10;
-            this.maxHealth = messageState['maxHealth'] ?? 10;
-            this.inventory = [];
-            this.lastInput = messageState['lastInput'] ?? '';
-            this.lastResponse = messageState['lastResponse'] ?? '';
-            for (let item of messageState['inventory'] ?? []) {
-                this.inventory.push(new Item(item.name, item.stat, item.bonus));
-            }
+            this.userStates = {...messageState.userStates};
+            this.lastInput = messageState.lastInput ?? '';
+            this.lastResponse = messageState.lastResponse ?? '';
         }
+    }
+
+    buildMessageState(): any {
+        return {userStates: {...this.userStates},
+                lastInput: this.lastInput,
+                lastResponse: this.lastResponse};
+        /*    lastOutcome: this.lastOutcome ?? null,
+            lastOutcomePrompt: this.lastOutcomePrompt ?? '',
+            lastInput: this.lastInput ?? '',
+            lastResponse: this.lastResponse ?? '',
+            experience: this.experience ?? 0,
+            health: this.health ?? 10,
+            maxHealth: this.maxHealth ?? 10,
+            inventory: this.inventory ?? []
+        };*/
     }
 
     convertOutcome(input: any): Outcome {
@@ -262,28 +290,6 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
 
     convertAction(input: any): Action {
         return new Action(input['description'], input['stat'] as Stat, input['difficultyModifier'], input['skillModifier'])
-    }
-
-    buildMessageState(): any {
-        return {
-            lastOutcome: this.lastOutcome ?? null,
-            lastOutcomePrompt: this.lastOutcomePrompt ?? '',
-            lastInput: this.lastInput ?? '',
-            lastResponse: this.lastResponse ?? '',
-            experience: this.experience ?? 0,
-            health: this.health ?? 10,
-            maxHealth: this.maxHealth ?? 10,
-            inventory: this.inventory ?? []
-        };
-    }
-
-    setLastOutcome(outcome: Outcome|null) {
-        this.lastOutcome = outcome;
-        this.lastOutcomePrompt = '';
-        if (this.lastOutcome) {
-            this.lastOutcomePrompt += `{{user}} has dictated the following action: "${this.lastOutcome.action.description}"\n`;
-            this.lastOutcomePrompt += `${ResultDescription[this.lastOutcome.result]}\n`
-        }
     }
 
     replaceTags(source: string, replacements: {[name: string]: string}) {
