@@ -124,14 +124,17 @@ export function buildResponsePrompt(stage: Stage, instruction: string) {
     return buildSection('Current Instruction', `{{user}} has chosen the following action:\n${instruction}`);
 };
 
+function buildHistory(history: string[]) {
+    return '\n' + history.join('\n\n');
+}
+
 function buildStatBlockPrompt(stage: Stage, anonymizedId: string) {
     let affectedCharacters = `{{user}}'s`;
     if (Object.keys(stage.users).length > 1) {
         affectedCharacters += ` (and ${Object.keys(stage.users).filter(id => id != anonymizedId).map(id => stage.users[id].name).join(', ')})`;
     }
     return  buildSection('Stats', Object.values(stage.stats).map(stat => `${stat.name} - ${stat.description}`).join('\n')) +
-            buildSection('Input: {{user}}', stage.lastInput) +
-            buildSection('Response: {{char}}', stage.lastResponse) +
+            buildSection('Chat History', buildHistory(stage.history)) +
             buildSection('Current Statblock', buildStatBlock(stage, '', 0, null)) +
             buildSection('Current Instruction', `You are doing critical prep work for a roleplaying game. Instead of narrating, you will use this planning response to ` +
             `output the CURRENT STATBLOCK, making logical updates--if needed--to implicitly reflect changes to ${affectedCharacters} status and inventory, based on events in {{user}}'s input and {{char}}'s response: ` +
@@ -146,8 +149,8 @@ function buildStatBlockPrompt(stage: Stage, anonymizedId: string) {
 export async function generateStatBlock(stage: Stage) {
     
     let tries = 3;
-    let success = false;
-    while (!success && tries > 0) {
+    let someSuccess = false;
+    while (!someSuccess && tries > 0) {
         let textResponse = await stage.generator.textGen({
             prompt: buildStatBlockPrompt(stage, stage.lastSpeaker),
 
@@ -155,7 +158,8 @@ export async function generateStatBlock(stage: Stage) {
             min_tokens: 50
         });
         if (textResponse && textResponse.result) {
-
+            let success = false;
+    
             const statBlocks: string[] = [];
             for (const line of textResponse.result.split("\n")) {
                 if (line.trim() === '') {
@@ -211,6 +215,7 @@ export async function generateStatBlock(stage: Stage) {
                     }
                     if (success) {
                         stage.userStates[anonymizedId] = userState;
+                        someSuccess = true;
                     }
                 }
             }
@@ -218,7 +223,7 @@ export async function generateStatBlock(stage: Stage) {
         
         tries--;
     }
-    if (!success) {
-        console.log('Failed to generate an updated statblock.');
+    if (!someSuccess) {
+        console.log('Failed to generate any updated statblock.');
     }
 }

@@ -45,8 +45,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
 
     // chat-level variables
     stats: {[key: string]: Stat};
-    lastInput: string;
-    lastResponse: string;
+    history: string[];
     lastSpeaker: string;
 
     // message-level variables
@@ -72,8 +71,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         console.log(characters);
         this.users = users;
         this.characters = characters;
-        this.lastInput = '';
-        this.lastResponse = '';
+        this.history = [];
         this.lastSpeaker = '';
         this.loadMessageState(messageState);
 
@@ -136,7 +134,10 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         let inputString = content;
         let userState = this.getUserState(anonymizedId);
 
-        this.lastInput = content;
+        this.history.push(`### Input ${this.users[anonymizedId]}: ${content}`);
+        if (this.history.length > 10) {
+            this.history.slice(this.history.length - 10);
+        }
         this.lastSpeaker = anonymizedId;
 
         if (Object.values(this.stats).length == 0) {
@@ -232,10 +233,14 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     async afterResponse(botMessage: Message): Promise<Partial<StageResponse<ChatStateType, MessageStateType>>> {
 
         let {
+            anonymizedId,
             content
         } = botMessage;
 
-        this.lastResponse = content;
+        this.history.push(`### Response ${this.characters[anonymizedId]}: ${content}`);
+        if (this.history.length > 10) {
+            this.history.slice(this.history.length - 10);
+        }
 
         // Remove initial --- from start of response (some LLMs like to do this):
         if (content.indexOf("---") == 0) {
@@ -267,16 +272,14 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     loadMessageState(messageState: MessageStateType) {
         if (messageState != null) {
             this.userStates = {...messageState.userStates};
-            this.lastInput = messageState.lastInput ?? '';
-            this.lastResponse = messageState.lastResponse ?? '';
+            this.history = messageState.history ?? [];
             this.lastSpeaker = messageState.lastSpeaker ?? '';
         }
     }
 
     buildMessageState(): any {
         return {userStates: {...this.userStates},
-                lastInput: this.lastInput,
-                lastResponse: this.lastResponse,
+                history: this.history,
                 lastSpeaker: this.lastSpeaker};
         /*    lastOutcome: this.lastOutcome ?? null,
             lastOutcomePrompt: this.lastOutcomePrompt ?? '',
