@@ -95,7 +95,6 @@ function buildSampleStatBlocks(stage: Stage) {
     let addedInventory = [...userState.inventory];
     let moddedInventory = [...userState.inventory];
     let removedInventory = [...userState.inventory];
-    console.log(`length: ${userState.inventory.length}`);
     
     addedInventory.push(new Item('Newly Acquired Item', 'Some Stat', Math.floor(Math.random() * 5) - 2));
     if (moddedInventory.length > 0) {
@@ -180,7 +179,8 @@ export async function generateStatBlock(stage: Stage) {
 
             const statBlockPattern = /^(.+?) - Health:\s*(\d+)\/(\d+)\s*(.*)/s;
             const match = textResponse.result.match(statBlockPattern);
-            
+            console.log(match);
+
             if (match && match[1] && match[2] && match[3] && match[4] && match[5]) {
                 console.log(`Found a stat block:`);
                 console.log(match);
