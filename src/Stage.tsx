@@ -237,6 +237,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             content
         } = botMessage;
 
+        this.messenger.updateEnvironment({input_enabled: false});
         this.history.push(`### Response ${this.characters[anonymizedId].name}: ${content}`);
         if (this.history.length > 10) {
             this.history.slice(this.history.length - 10);
@@ -252,6 +253,8 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         }
 
         await generateStatBlock(this);
+
+        this.messenger.updateEnvironment({input_enabled: true});
 
         return {
             stageDirections: null,

@@ -135,7 +135,7 @@ function buildStatBlockPrompt(stage: Stage, anonymizedId: string) {
     if (Object.keys(stage.users).length > 1) {
         affectedCharacters += ` (and ${Object.keys(stage.users).filter(id => id != anonymizedId).map(id => stage.users[id].name).join(', ')})`;
     }
-    return  `This is a roleplaying narrative for which you will be methodically assessing and updating statblocks for the main character(s): ${mainCharacters}. Each main character has health and a list of significant items or status effects that benefit or penalize the STATS listed below.\n` +
+    return  `This is a roleplaying narrative for which you will be methodically assessing and updating statblocks for the main character(s): ${mainCharacters}. Each main character has health and a list of significant items or status effects that benefit or penalize the STATS listed below.\n\n` +
             buildSection('Stats', Object.values(stage.stats).map(stat => `${stat.name} - ${stat.description}`).join('\n')) +
             buildSection('Inventory Rules', 'Each main character has an "inventory" of listed items or status effects. Each item has a name, followed by a parenthetical stat and bonus or penalty. The format is quite strict: Name (Stat +x) or Name (Stat -x).' +
                 'The inventory should only contain significant items/effects with a single bonus/penalty each. If nothing significant currently applies, the inventory is simply left blank.') +
