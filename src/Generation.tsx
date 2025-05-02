@@ -261,12 +261,13 @@ function escapeRegex(input: string) {
 
 export async function determineStatAndDifficulty(stage: Stage) {
     
-    const statRegex = new RegExp(`/(${Object.keys(stage.stats).map(escapeRegex).join('|')})\s*([+-]\d+)`, 'gi');
+    const statRegex = new RegExp(`(${Object.keys(stage.stats).map(escapeRegex).join('|')})\s*([+-]\d+)`, 'gi');
+    console.log(statRegex);
     let tries = 3;
     while (tries > 0) {
         let textResponse = await stage.generator.textGen({
             prompt: 
-                `This is a roleplaying narrative for which you are mechanically assessing the player's current actions.\n\n` +
+                `This is a roleplaying game for which you are mechanically assessing the player's current actions.\n\n` +
                 buildSection('Stats', Object.values(stage.stats).map(stat => `${stat.name} - ${stat.description}`).join('\n')) +
                 buildSection('Chat History', buildHistory(stage.history)) +
                 buildSection('Sample Output', `${Object.values(stage.stats)[Math.floor(Math.random() * Object.keys(stage.stats).length)].name} -2`) +
@@ -284,6 +285,7 @@ export async function determineStatAndDifficulty(stage: Stage) {
         });
         if (textResponse && textResponse.result) {
             const match = textResponse.result.match(statRegex);
+            console.log(match);
             if (match && match[1] && match[2]) {
                 return match;
             } else if (textResponse.result.toLocaleLowerCase().includes("none")) {
