@@ -180,7 +180,7 @@ export async function generateStatBlock(stage: Stage) {
                         continue;
                     } else {
                         console.log('--- encountered; return');
-                        return;
+                        break;
                     }
                 } else if (line.includes(" - Health: ")) {
                     console.log('Start block');
