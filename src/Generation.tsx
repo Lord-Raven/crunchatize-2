@@ -265,11 +265,12 @@ export async function determineStatAndDifficulty(stage: Stage) {
                 `This is a roleplaying narrative for which you are mechanically assessing the player's current actions.\n\n` +
                 buildSection('Stats', Object.values(stage.stats).map(stat => `${stat.name} - ${stat.description}`).join('\n')) +
                 buildSection('Chat History', buildHistory(stage.history)) +
-                buildSection('Sample Output', `${Object.values(stage.stats)[Math.floor(Math.random() * Object.keys(stage.stats).length)]} -2`) +
-                buildSection('Sample Output', `${Object.values(stage.stats)[Math.floor(Math.random() * Object.keys(stage.stats).length)]} +0`) +
-                buildSection('Sample Output', `${Object.values(stage.stats)[Math.floor(Math.random() * Object.keys(stage.stats).length)]} +1`) +
-                buildSection('Current Instruction', `Consider ${stage.users[stage.lastSpeaker].name}'s last input:\n${stage.history[stage.history.length - 1]}\n` +
-                    `Use this preparatory response to evaluate whether the actions or dialog presented in this input should be represented by a STAT check and output the most relevant STAT and a difficulty modifier between -4 and +2. ` +
+                buildSection('Sample Output', `${Object.values(stage.stats)[Math.floor(Math.random() * Object.keys(stage.stats).length)].name} -2`) +
+                buildSection('Sample Output', `${Object.values(stage.stats)[Math.floor(Math.random() * Object.keys(stage.stats).length)].name} +0`) +
+                buildSection('Sample Output', `${Object.values(stage.stats)[Math.floor(Math.random() * Object.keys(stage.stats).length)].name} +1`) +
+                buildSection('Current Instruction', `Consider ${stage.users[stage.lastSpeaker].name}'s last input:\n"${stage.history[stage.history.length - 1]}"\n` +
+                    `Use this preparatory response to evaluate whether the actions or dialog presented in this input could require a skill check governed by one of the STATS above. ` +
+                    `Begin this response by outputting the most relevant STAT and a difficulty modifier between -4 and +2. ` +
                     `The difficulty should be based upon the apparent challenge of the task being attempted and not upon ${stage.users[stage.lastSpeaker].name}'s seeming advantages or disadvantages. ` +
                     `If the input does not present any challenge or significant action, simply output "NONE."`
                 ) +
@@ -281,6 +282,8 @@ export async function determineStatAndDifficulty(stage: Stage) {
             const match = textResponse.result.match(statRegex);
             if (match && match[1] && match[2]) {
                 return match;
+            } else if (textResponse.result.toLocaleLowerCase().includes("none")) {
+                return null;
             }
         }
         tries--;
