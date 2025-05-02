@@ -202,8 +202,9 @@ export async function generateStatBlock(stage: Stage) {
             console.log(match);
 
             if (match && match[1] && match[2] && match[3] && match[4]) {
-                console.log(`Statblock is complete enough to try processing`);
-                const anonymizedId = Object.keys(stage.users).find(anonymizedId => stage.users[anonymizedId].name.trim() == match[1].trim())
+                console.log(`Statblock is complete enough to try processing; looking for ID for ${match[1]}`);
+
+                const anonymizedId = Object.keys(stage.users).find(anonymizedId => stage.users[anonymizedId].name.toLowerCase().trim() == match[1].toLowerCase().trim());
 
                 if (anonymizedId) {
                     const userState: UserState = {...stage.getUserState(anonymizedId ?? '')} as UserState;
@@ -267,17 +268,18 @@ export async function determineStatAndDifficulty(stage: Stage) {
     while (tries > 0) {
         let textResponse = await stage.generator.textGen({
             prompt: 
-                `This is a roleplaying game for which you are mechanically assessing the player's current actions.\n\n` +
+                `This is a roleplaying game for which you are mechanically assessing a player's current actions.\n\n` +
                 buildSection('Stats', Object.values(stage.stats).map(stat => `${stat.name} - ${stat.description}`).join('\n')) +
                 buildSection('Chat History', buildHistory(stage.history)) +
-                buildSection('Sample Output', `${Object.values(stage.stats)[Math.floor(Math.random() * Object.keys(stage.stats).length)].name} -2`) +
-                buildSection('Sample Output', `${Object.values(stage.stats)[Math.floor(Math.random() * Object.keys(stage.stats).length)].name} +0`) +
-                buildSection('Sample Output', `${Object.values(stage.stats)[Math.floor(Math.random() * Object.keys(stage.stats).length)].name} +1`) +
+                buildSection('Sample Output', `${Object.values(stage.stats)[Math.floor(Math.random() * Object.keys(stage.stats).length)].name} -3: ${stage.users[stage.lastSpeaker].name}'s actions are roughly aligned with this stat but they seem very challenging and outright risky.`) +
+                buildSection('Sample Output', `${Object.values(stage.stats)[Math.floor(Math.random() * Object.keys(stage.stats).length)].name} +0: This stat suits ${stage.users[stage.lastSpeaker].name}'s course of action, and the task feels straightforward.`) +
+                buildSection('Sample Output', `${Object.values(stage.stats)[Math.floor(Math.random() * Object.keys(stage.stats).length)].name} +1: I have selected this stat because it best fits the situation. ${stage.users[stage.lastSpeaker].name}'s actions should also be relatively easy.`) +
+                buildSection('Sample Output', `None: ${stage.users[stage.lastSpeaker].name} is simply answering a question honestly here; there is no risk or stat to associate to this course of action.`) +
                 buildSection('Current Instruction', `Consider ${stage.users[stage.lastSpeaker].name}'s last input:\n"${stage.history[stage.history.length - 1]}"\n` +
                     `Use this preparatory response to evaluate whether the actions or dialog presented in this input could require a skill check governed by one of the STATS above. ` +
                     `Begin this response by outputting the most relevant STAT and a difficulty modifier between -4 and +2. ` +
-                    `The difficulty should be based upon the apparent challenge of the task being attempted and not upon ${stage.users[stage.lastSpeaker].name}'s seeming advantages or disadvantages. ` +
-                    `If the input does not present any challenge or significant action, simply output "NONE."`
+                    `The difficulty modifier should be based upon the apparent challenge or risk of the task being attempted and not upon ${stage.users[stage.lastSpeaker].name}'s personal advantages or disadvantages (these will be factored in later). ` +
+                    `If the input does not present any challenge, risk, or significant action, simply output "None."`
                 ) +
                 '### FUTURE INSTRUCTION:',
             max_tokens: 60,
