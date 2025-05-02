@@ -169,7 +169,7 @@ export async function generateStatBlock(stage: Stage) {
             min_tokens: 50
         });
         if (textResponse && textResponse.result) {
-            let success = false;
+            
             textResponse.result = textResponse.result.replace(/\-\-\-/g, '\n---\n');
             console.log(`Result: ${textResponse.result}`);
     
@@ -197,53 +197,56 @@ export async function generateStatBlock(stage: Stage) {
             }
             console.log(statBlocks);
 
-            const statBlockPattern = /^(.+?) - Health:\s*(\d+)\/(\d+)\s*(.*)/s;
-            const match = textResponse.result.match(statBlockPattern);
-            console.log(match);
+            for (let statBlock of statBlocks) {
+                let success = false;
+                const statBlockPattern = /^(.+?) - Health:\s*(\d+)\/(\d+)\s*(.*)/s;
+                const match = statBlock.match(statBlockPattern);
+                console.log(match);
 
-            if (match && match[1] && match[2] && match[3] && match[4]) {
-                console.log(`Statblock is complete enough to try processing; looking for ID for ${match[1]}`);
+                if (match && match[1] && match[2] && match[3] && match[4]) {
+                    console.log(`Statblock is complete enough to try processing; looking for ID for ${match[1]}`);
 
-                const anonymizedId = Object.keys(stage.users).find(anonymizedId => stage.users[anonymizedId].name.toLowerCase().trim() == match[1].toLowerCase().trim());
+                    const anonymizedId = Object.keys(stage.users).find(anonymizedId => stage.users[anonymizedId].name.toLowerCase().trim() == match[1].toLowerCase().trim());
 
-                if (anonymizedId) {
-                    const userState: UserState = {...stage.getUserState(anonymizedId ?? '')} as UserState;
+                    if (anonymizedId) {
+                        const userState: UserState = {...stage.getUserState(anonymizedId ?? '')} as UserState;
 
-                    success = true;
-                    console.log(`Matched a user: ${anonymizedId}/${stage.users[anonymizedId].name}`);
-                    userState.health = parseInt(match[2]);
-                    userState.maxHealth = parseInt(match[3]);
+                        success = true;
+                        console.log(`Matched a user: ${anonymizedId}/${stage.users[anonymizedId].name}`);
+                        userState.health = parseInt(match[2]);
+                        userState.maxHealth = parseInt(match[3]);
 
-                    // Clean up inventory:
-                    const itemString = match[4].replace(/<br>|\\n|`/gs, ' ');
-                    console.log(`Cleaned up inventory: ${itemString}`)
-                    const previousInventory = [...userState.inventory];
-                    userState.inventory = [];
-                    const itemPattern = /([\w\s-]+)\s*\(([^)]+)\)/g;
-                    let itemMatch;
-                    while ((itemMatch = itemPattern.exec(itemString)) !== null) {
-                        console.log(itemMatch);
-                        if (itemMatch[1] && itemMatch[2]) {
-                            const name = itemMatch[1].trim();
-                            const statFirst = itemMatch[2].match(/(\w+)\s*([+-]\d+)/);
-                            const statLast = itemMatch[2].match(/([+-]\d+)\s*(\w+)/);
-                            console.log(`${statFirst}\n${statLast}`);
-                            const bonus = statFirst ? parseInt(statFirst[2]) : (statLast ? parseInt(statLast[1]) : null);
-                            const stat = statFirst ? findMostSimilarStat(statFirst[1], stage.stats) : (statLast ? findMostSimilarStat(statLast[2], stage.stats) : null);
-                            if (name && stat && bonus) {
-                                console.log(`New item: ${name}, ${stat}, ${bonus}`);
-                                userState.inventory.push(new Item(name, stat.name, bonus));
-                            } else {
-                                console.log('Failed to parse an item; revert');
-                                userState.inventory = previousInventory;
-                                success = false;
-                                break;
+                        // Clean up inventory:
+                        const itemString = match[4].replace(/<br>|\\n|`/gs, ' ');
+                        console.log(`Cleaned up inventory: ${itemString}`)
+                        const previousInventory = [...userState.inventory];
+                        userState.inventory = [];
+                        const itemPattern = /([\w\s-]+)\s*\(([^)]+)\)/g;
+                        let itemMatch;
+                        while ((itemMatch = itemPattern.exec(itemString)) !== null) {
+                            console.log(itemMatch);
+                            if (itemMatch[1] && itemMatch[2]) {
+                                const name = itemMatch[1].trim();
+                                const statFirst = itemMatch[2].match(/(\w+)\s*([+-]\d+)/);
+                                const statLast = itemMatch[2].match(/([+-]\d+)\s*(\w+)/);
+                                console.log(`${statFirst}\n${statLast}`);
+                                const bonus = statFirst ? parseInt(statFirst[2]) : (statLast ? parseInt(statLast[1]) : null);
+                                const stat = statFirst ? findMostSimilarStat(statFirst[1], stage.stats) : (statLast ? findMostSimilarStat(statLast[2], stage.stats) : null);
+                                if (name && stat && bonus) {
+                                    console.log(`New item: ${name}, ${stat}, ${bonus}`);
+                                    userState.inventory.push(new Item(name, stat.name, bonus));
+                                } else {
+                                    console.log('Failed to parse an item; revert');
+                                    userState.inventory = previousInventory;
+                                    success = false;
+                                    break;
+                                }
                             }
                         }
-                    }
-                    if (success) {
-                        stage.userStates[anonymizedId] = userState;
-                        someSuccess = true;
+                        if (success) {
+                            stage.userStates[anonymizedId] = userState;
+                            someSuccess = true;
+                        }
                     }
                 }
             }
@@ -262,7 +265,7 @@ function escapeRegex(input: string) {
 
 export async function determineStatAndDifficulty(stage: Stage) {
     
-    const statRegex = new RegExp(`(${Object.keys(stage.stats).map(escapeRegex).join('|')})\s*([+-]\d+)`, 'gi');
+    const statRegex = new RegExp(`(${Object.keys(stage.stats).map(escapeRegex).join('|')})\\s*([+-]\\d+)`, 'gi');
     console.log(statRegex);
     let tries = 3;
     while (tries > 0) {
