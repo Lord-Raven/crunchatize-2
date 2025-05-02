@@ -265,7 +265,7 @@ function escapeRegex(input: string) {
 
 export async function determineStatAndDifficulty(stage: Stage) {
     
-    const statRegex = new RegExp(`(${Object.keys(stage.stats).map(escapeRegex).join('|')})\\s*([+-]\\d+)`, 'gi');
+    const statRegex = new RegExp(`(${Object.keys(stage.stats).map(escapeRegex).join('|')})\\s*([+-]\\d+)`, 'i');
     console.log(statRegex);
     let tries = 3;
     while (tries > 0) {
