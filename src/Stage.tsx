@@ -208,7 +208,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         }
 
         return {
-            stageDirections: `\n${this.replaceTags(buildResponsePrompt(this, outcome),{
+            stageDirections: `\n${this.replaceTags(buildResponsePrompt(this, userState, outcome),{
                 "user": this.users[anonymizedId].name,
                 "char": promptForId ? this.characters[promptForId].name : ''
             })}\n`,
