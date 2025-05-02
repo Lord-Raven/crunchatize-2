@@ -24,7 +24,6 @@ type ChatStateType = any;
 */
 
 export interface UserState {
-    name: string;
     maxHealth: number;
     health: number;
     inventory: Item[];
@@ -36,7 +35,6 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     readonly defaultStat: number = 0;
     readonly levelThresholds: number[] = [2, 5, 8, 12, 16, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100];
     readonly defaultUserState: UserState = {
-        name: '',
         maxHealth: 10,
         health: 10,
         inventory: [],
@@ -203,12 +201,12 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
 
                 this.statUses = this.clearStatMap();*/
             } else {
-                finalContent += `\n###${userState.name} has learned from this experience.###`
+                finalContent += `\n###${this.users[anonymizedId].name} has learned from this experience.###`
             }
         }
 
         return {
-            stageDirections: `\n${this.replaceTags(buildResponsePrompt(this, userState, outcome),{
+            stageDirections: `\n${this.replaceTags(buildResponsePrompt(this, anonymizedId, outcome),{
                 "user": this.users[anonymizedId].name,
                 "char": promptForId ? this.characters[promptForId].name : ''
             })}\n`,
@@ -222,7 +220,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
 
     getUserState(anonymizedId: string): UserState {
         if (!this.userStates[anonymizedId] && anonymizedId.trim() != '') {
-            this.userStates[anonymizedId] = {...this.defaultUserState, name: this.users[anonymizedId].name};
+            this.userStates[anonymizedId] = {...this.defaultUserState};
         }
         return this.userStates[anonymizedId] ?? this.defaultUserState;
     }

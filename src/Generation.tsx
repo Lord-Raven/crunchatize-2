@@ -113,18 +113,20 @@ function buildSampleStatBlocks(stage: Stage) {
     
 function buildStatBlock(stage: Stage, targetId: string, healthMod: number, inventoryOverride: Item[]|null) {
     return '---\n' +
-            Object.keys(stage.users).map(anonymizedId => buildUserState(stage.getUserState(anonymizedId), targetId == anonymizedId ? healthMod : 0, (inventoryOverride && targetId == anonymizedId) ? inventoryOverride : stage.userStates[anonymizedId].inventory)).join('\n') +
+            Object.keys(stage.users).map(anonymizedId => buildUserState(stage, anonymizedId, targetId == anonymizedId ? healthMod : 0, (inventoryOverride && targetId == anonymizedId) ? inventoryOverride : stage.userStates[anonymizedId].inventory)).join('\n') +
             '\n---';
 };
 
-function buildUserState(userState: UserState, healthMod: number, inventory: Item[]) {
-    return `${userState.name} - Health: ${userState.health + healthMod}/${userState.maxHealth}\n${inventory.map(item => item.print()).join(' ')}`;
+function buildUserState(stage: Stage, anonymizedId: string, healthMod: number, inventory: Item[]) {
+    const userState = stage.getUserState(anonymizedId);
+    return `${stage.users[anonymizedId].name} - Health: ${userState.health + healthMod}/${userState.maxHealth}\n${inventory.map(item => item.print()).join(' ')}`;
 }
 
-export function buildResponsePrompt(stage: Stage, userState: UserState, outcome: Outcome) {
+export function buildResponsePrompt(stage: Stage, anonymizedId: string, outcome: Outcome) {
+    const userState = stage.getUserState(anonymizedId);
     const relevantInventory = userState.inventory.filter(item => item.stat && item.stat == outcome.action.stat?.name);
-    const inventoryString = relevantInventory.length > 0 ? `${userState.name} has the following relevant item(s) or status effect(s) that could be incorporated into this moment: ${relevantInventory.map(item => item.print()).join(', ')}.` : `${userState.name} does not have any particularly relevant items or status effects to consider in this situation.`;
-    return buildSection('Current Instruction', `${userState.name} has chosen the following action:\n${outcome.action}\n${ResultDescription[outcome.result]}\n${inventoryString}\n`);
+    const inventoryString = relevantInventory.length > 0 ? `${stage.users[anonymizedId].name} has the following relevant item(s) or status effect(s) that could be incorporated into this moment: ${relevantInventory.map(item => item.print()).join(', ')}.` : `${stage.users[anonymizedId].name} does not have any particularly relevant items or status effects to consider in this situation.`;
+    return buildSection('Current Instruction', `${stage.users[anonymizedId].name} has chosen the following action:\n${outcome.action}\n${ResultDescription[outcome.result]}\n${inventoryString}\n`);
 };
 
 
@@ -200,13 +202,14 @@ export async function generateStatBlock(stage: Stage) {
             console.log(match);
 
             if (match && match[1] && match[2] && match[3] && match[4]) {
-                console.log(`Found a stat block:`);
-                console.log(match);
-                const anonymizedId = Object.keys(stage.userStates).find(anonymizedId => stage.userStates[anonymizedId].name == match[1])
-                const userState: UserState = {...stage.getUserState(anonymizedId ?? '')} as UserState;
-                if (anonymizedId && userState.name != '') {
+                console.log(`Statblock is complete enough to try processing`);
+                const anonymizedId = Object.keys(stage.users).find(anonymizedId => stage.users[anonymizedId].name.trim() == match[1].trim())
+
+                if (anonymizedId) {
+                    const userState: UserState = {...stage.getUserState(anonymizedId ?? '')} as UserState;
+
                     success = true;
-                    console.log(`Matched a user: ${anonymizedId}/${userState.name}`);
+                    console.log(`Matched a user: ${anonymizedId}/${stage.users[anonymizedId].name}`);
                     userState.health = parseInt(match[2]);
                     userState.maxHealth = parseInt(match[3]);
 
