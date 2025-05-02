@@ -255,9 +255,13 @@ export async function generateStatBlock(stage: Stage) {
     }
 }
 
+function escapeRegex(input: string) {
+    return input.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+}
+
 export async function determineStatAndDifficulty(stage: Stage) {
     
-    const statRegex = new RegExp(`/${Object.values(stage.stats).map(stat => stat.name).join('|')}\s*([+-]\d+)`, 'g');
+    const statRegex = new RegExp(`/(${Object.keys(stage.stats).map(escapeRegex).join('|')})\s*([+-]\d+)`, 'gi');
     let tries = 3;
     while (tries > 0) {
         let textResponse = await stage.generator.textGen({
