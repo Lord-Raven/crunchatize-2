@@ -7,7 +7,7 @@ import {Item} from "./Item"
 import {Outcome, Result, ResultDescription} from "./Outcome";
 import {env, pipeline} from '@xenova/transformers';
 import {Client} from "@gradio/client";
-import { buildResponsePrompt, generateStatBlock, generateStats } from "./Generation";
+import { buildResponsePrompt, determineStatAndDifficulty, generateStatBlock, generateStats } from "./Generation";
 
 type MessageStateType = any;
 
@@ -131,7 +131,6 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         let errorMessage: string|null = null;
         let takenAction: Action|null = null;
         let finalContent: string|undefined = content;
-        let inputString = content;
         let userState = this.getUserState(anonymizedId);
 
         this.history.push(`### Input ${this.users[anonymizedId].name}: ${content}`);
@@ -147,7 +146,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         }
 
         if (finalContent) {
-            let sequence = this.replaceTags(content,
+            /*let sequence = this.replaceTags(content,
                 {"user": this.users[anonymizedId].name, "char": promptForId ? this.characters[promptForId].name : ''});
 
             const statMapping:{[key: string]: string} = Object.values(this.stats).reduce((acc, stat) => {acc[`${stat.name}: ${stat.description}`] = stat.name; return acc;}, {} as {[key: string]: string});
@@ -179,6 +178,13 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
 
             if (topStat && difficultyRating < 1000) {
                 takenAction = new Action(finalContent, topStat, difficultyRating, userState.inventory);
+            } else {
+                takenAction = new Action(finalContent, null, 0, userState.inventory);
+            }*/
+
+            const match = await determineStatAndDifficulty(this);
+            if (match) {
+                takenAction = new Action(finalContent, Object.values(this.stats).find(stat => stat.name.trim().toLowerCase() == match[1].trim().toLowerCase()) ?? null, Number.parseInt(match[2].trim()), userState.inventory);
             } else {
                 takenAction = new Action(finalContent, null, 0, userState.inventory);
             }
