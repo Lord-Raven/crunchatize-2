@@ -121,9 +121,12 @@ function buildUserState(userState: UserState, healthMod: number, inventory: Item
     return `${userState.name} - Health: ${userState.health + healthMod}/${userState.maxHealth}\n${inventory.map(item => item.print()).join(' ')}`;
 }
 
-export function buildResponsePrompt(stage: Stage, outcome: Outcome) {
-    return buildSection('Current Instruction', `{{user}} has chosen the following action:\n${outcome.action}\n${ResultDescription[outcome.result]}`);
+export function buildResponsePrompt(stage: Stage, userState: UserState, outcome: Outcome) {
+    const relevantInventory = userState.inventory.filter(item => item.stat && item.stat == outcome.action.stat?.name);
+    const inventoryString = relevantInventory.length > 0 ? `${userState.name} has the following relevant item(s) or status effect(s) that could be incorporated into this moment: ${relevantInventory.map(item => item.print()).join(', ')}.` : `${userState.name} does not have any particularly relevant items or status effects to consider in this situation.`;
+    return buildSection('Current Instruction', `${userState.name} has chosen the following action:\n${outcome.action}\n${ResultDescription[outcome.result]}\n${inventoryString}\n`);
 };
+
 
 function buildHistory(history: string[]) {
     return '\n' + history.join('\n\n');
