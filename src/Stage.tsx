@@ -2,11 +2,9 @@ import {ReactElement} from "react";
 import {StageBase, StageResponse, InitialData, Message, Character, User} from "@chub-ai/stages-ts";
 import {LoadResponse} from "@chub-ai/stages-ts/dist/types/load";
 import {Action} from "./Action";
-import {Stat, findMostSimilarStat} from "./Stat"
+import {Stat} from "./Stat"
 import {Item} from "./Item"
-import {Outcome, Result, ResultDescription} from "./Outcome";
-import {env, pipeline} from '@xenova/transformers';
-import {Client} from "@gradio/client";
+import {Outcome, Result} from "./Outcome";
 import { buildResponsePrompt, determineStatAndDifficulty, generateStatBlock, generateStats } from "./Generation";
 
 type MessageStateType = any;
@@ -28,6 +26,8 @@ export interface UserState {
     health: number;
     inventory: Item[];
     experience: number;
+    statUses: {[key: string]: number};
+    statScores: {[key: string]: number};
 }
 
 export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateType, ConfigType> {
@@ -39,6 +39,8 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         health: 10,
         inventory: [],
         experience: 0,
+        statUses: {},
+        statScores: {}
     }
 
     // chat-level variables
@@ -51,9 +53,6 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
 
     // other
     client: any;
-    fallbackPipelinePromise: Promise<any> | null = null;
-    fallbackPipeline: any = null;
-    fallbackMode: boolean;
     users: {[key: string]: User};
     characters: {[key: string]: Character};
 
@@ -80,26 +79,9 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         } else {
             this.stats = {};
         }
-
-        this.fallbackMode = false;
-        this.fallbackPipeline = null;
-        env.allowRemoteModels = false;
     }
 
     async load(): Promise<Partial<LoadResponse<InitStateType, ChatStateType, MessageStateType>>> {
-
-        try {
-            this.fallbackPipelinePromise = this.getPipeline();
-        } catch (exception: any) {
-            console.error(`Error loading pipeline: ${exception}`);
-        }
-
-        try {
-            this.client = await Client.connect("Ravenok/statosphere-backend", {hf_token: import.meta.env.VITE_HF_API_KEY});
-        } catch (error) {
-            console.error(`Error connecting to backend pipeline; will resort to local inference.`);
-            this.fallbackMode = true;
-        }
 
         console.log('Finished loading stage.');
 
@@ -109,10 +91,6 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             initState: null,
             chatState: {stats: this.stats},
         };
-    }
-
-    async getPipeline() {
-        return pipeline("zero-shot-classification", "Xenova/mobilebert-uncased-mnli");
     }
 
     async setState(state: MessageStateType): Promise<void> {
@@ -146,66 +124,34 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         }
 
         if (finalContent) {
-            /*let sequence = this.replaceTags(content,
-                {"user": this.users[anonymizedId].name, "char": promptForId ? this.characters[promptForId].name : ''});
-
-            const statMapping:{[key: string]: string} = Object.values(this.stats).reduce((acc, stat) => {acc[`${stat.name}: ${stat.description}`] = stat.name; return acc;}, {} as {[key: string]: string});
-            let topStat: Stat|null = null;
-            const statHypothesis = `The narrator's actions or dialog involve {}.`
-            const statPromise = this.query({sequence: sequence, candidate_labels: Object.keys(statMapping), hypothesis_template: statHypothesis, multi_label: true });
-
-            const difficultyMapping:{[key: string]: number} = {
-                '1 (simple and safe)': 1000,
-                '2 (straightforward or fiddly)': 1,
-                '3 (complex or tricky)': 0,
-                '4 (challenging and risky)': -1,
-                '5 (arduous and dangerous)': -2,
-                '6 (virtually impossible)': -3};
-            let difficultyRating:number = 0;
-            const difficultyHypothesis = 'On a scale of 1-6, the difficulty of the narrator\'s actions is {}.';
-            let difficultyResponse = await this.query({sequence: sequence, candidate_labels: Object.keys(difficultyMapping), hypothesis_template: difficultyHypothesis, multi_label: true });
-            console.log(`Difficulty modifier selected: ${difficultyMapping[difficultyResponse.labels[0]]}`);
-            if (difficultyResponse && difficultyResponse.labels[0]) {
-                difficultyRating = difficultyMapping[difficultyResponse.labels[0]];
-            }
-
-            let statResponse = await statPromise;
-            console.log(`Stat selected: ${(statResponse.scores[0] > 0.1 ? statMapping[statResponse.labels[0]] : 'None')}`);
-            if (statResponse && statResponse.labels && statResponse.scores[0] > 0.1 && statMapping[statResponse.labels[0]] != 'None') {
-                topStat = this.stats[statMapping[statResponse.labels[0]]];
-                console.log(`topStat: ${topStat.name}`);
-            }
-
-            if (topStat && difficultyRating < 1000) {
-                takenAction = new Action(finalContent, topStat, difficultyRating, userState.inventory);
-            } else {
-                takenAction = new Action(finalContent, null, 0, userState.inventory);
-            }*/
-
             const match = await determineStatAndDifficulty(this);
             if (match) {
-                takenAction = new Action(finalContent, Object.values(this.stats).find(stat => stat.name.trim().toLowerCase() == match[1].trim().toLowerCase()) ?? null, Number.parseInt(match[2].trim()), userState.inventory);
+                takenAction = new Action(finalContent, Object.values(this.stats).find(stat => stat.name.trim().toLowerCase() == match[1].trim().toLowerCase()) ?? null, Number.parseInt(match[2].trim()), userState);
             } else {
-                takenAction = new Action(finalContent, null, 0, userState.inventory);
+                takenAction = new Action(finalContent, null, 0, userState);
             }
         }
 
-        const outcome: Outcome = takenAction ? takenAction.determineSuccess() : new Outcome(0, 0, new Action(finalContent, null, 0, userState.inventory));
+        const outcome: Outcome = takenAction ? takenAction.determineSuccess() : new Outcome(0, 0, new Action(finalContent, null, 0, userState));
         finalContent = outcome.getDescription();
+
+        if (takenAction && takenAction.stat != null) {
+            userState.statUses[takenAction.stat.name] = (userState.statUses[takenAction.stat.name] ?? 0) + 1;
+        }
 
         if ([Result.Failure, Result.CriticalSuccess].includes(outcome.result)) {
             userState.experience++;
-            let level = this.getLevel();
+            let level = this.getLevel(userState);
             if (userState.experience == this.levelThresholds[level]) {
-                /*const maxCount = Math.max(...Object.values(this.statUses));
-                const maxStats = Object.keys(this.statUses)
-                        .filter((stat) => this.statUses[stat as Stat] === maxCount)
-                        .map((stat) => stat as Stat);
+                const maxCount = Math.max(...Object.values(userState.statUses));
+                const maxStats = Object.keys(userState.statUses)
+                        .filter((stat) => userState.statUses[stat] === maxCount)
+                        .map((stat) => stat);
                 let chosenStat = maxStats[Math.floor(Math.random() * maxStats.length)];
 
                 finalContent += `\n##Welcome to level ${level + 2}!##\n#_${chosenStat}_ up!#`;
 
-                this.statUses = this.clearStatMap();*/
+                userState.statUses = {};
             } else {
                 finalContent += `\n###${this.users[anonymizedId].name} has learned from this experience.###`
             }
@@ -231,8 +177,8 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         return this.userStates[anonymizedId] ?? this.defaultUserState;
     }
 
-    getLevel(): number {
-        return 0; // Object.values(this.statScores).reduce((acc, val) => acc + val, 0)
+    getLevel(userState: UserState): number {
+        return Object.values(userState.statScores).reduce((acc, val) => acc + val, 0)
     }
 
     async afterResponse(botMessage: Message): Promise<Partial<StageResponse<ChatStateType, MessageStateType>>> {
@@ -314,31 +260,6 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         return source.replace(/{{([A-z]*)}}/g, (match) => {
             return replacements[match.substring(2, match.length - 2)];
         });
-    }
-
-    async query(data: any) {
-        let result: any = null;
-        if (this.client && !this.fallbackMode) {
-            try {
-                const response = await this.client.predict("/predict", {data_string: JSON.stringify(data)});
-                result = JSON.parse(`${response.data[0]}`);
-            } catch(e) {
-                console.log(e);
-            }
-        }
-        if (!result) {
-            if (!this.fallbackMode) {
-                console.log('Falling back to local zero-shot pipeline.');
-                this.fallbackMode = true;
-                Client.connect("Ravenok/statosphere-backend", {hf_token: import.meta.env.VITE_HF_API_KEY}).then(client => {this.fallbackMode = false; this.client = client}).catch(err => console.log(err));
-            }
-            if (this.fallbackPipeline == null) {
-                this.fallbackPipeline = this.fallbackPipelinePromise ? await this.fallbackPipelinePromise : await this.getPipeline();
-            }
-            result = await this.fallbackPipeline(data.sequence, data.candidate_labels, { hypothesis_template: data.hypothesis_template, multi_label: data.multi_label });
-        }
-        console.log({sequence: data.sequence, hypothesisTemplate: data.hypothesis_template, labels: result.labels, scores: result.scores});
-        return result;
     }
 
     render(): ReactElement {

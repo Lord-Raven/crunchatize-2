@@ -177,21 +177,16 @@ export async function generateStatBlock(stage: Stage) {
             for (const line of textResponse.result.split("\n")) {
                 console.log(line);
                 if (line.trim() === '') {
-                    console.log('trimmed to empty');
                     continue;
                 } else if (line.trim().includes("---")) {
                     if (statBlocks.length == 0) {
-                        console.log('--- encountered; continue');
                         continue;
                     } else {
-                        console.log('--- encountered; return');
                         break;
                     }
                 } else if (line.includes(" - Health: ")) {
-                    console.log('Start block');
                     statBlocks.push(line);
                 } else if (statBlocks.length > 0) {
-                    console.log('Adding to block');
                     statBlocks[statBlocks.length - 1] = statBlocks[statBlocks.length - 1] + '\n' + line;
                 }
             }
@@ -212,10 +207,8 @@ export async function generateStatBlock(stage: Stage) {
                         const userState: UserState = {...stage.getUserState(anonymizedId ?? '')} as UserState;
 
                         success = true;
-                        console.log(`Matched a user: ${anonymizedId}/${stage.users[anonymizedId].name}`);
                         userState.health = parseInt(match[2]);
                         userState.maxHealth = parseInt(match[3]);
-
                         // Clean up inventory:
                         const itemString = match[4].replace(/<br>|\\n|`/gs, ' ');
                         console.log(`Cleaned up inventory: ${itemString}`)
