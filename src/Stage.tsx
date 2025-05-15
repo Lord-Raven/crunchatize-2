@@ -5,7 +5,8 @@ import {Action} from "./Action";
 import {Stat} from "./Stat"
 import {Item} from "./Item"
 import {Outcome, Result} from "./Outcome";
-import { buildResponsePrompt, determineStatAndDifficulty, generateStatBlock, generateStats } from "./Generation";
+import { buildResponsePrompt, determineStatAndDifficulty, generateMeters, generateStatBlock, generateStats } from "./Generation";
+import { Meter } from "./Meter";
 
 type MessageStateType = any;
 
@@ -45,6 +46,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
 
     // chat-level variables
     stats: {[key: string]: Stat};
+    meters: {[key: string]: Meter};
 
     // message-level variables
     userStates: {[key: string]: UserState} = {};
@@ -74,10 +76,13 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
 
         if (chatState) {
             this.stats = chatState.stats;
-            console.log('Loaded stats from chatState:');
+            this.meters = chatState.meters;
+            console.log('Loaded from chatState:');
             console.log(this.stats);
+            console.log(this.meters);
         } else {
             this.stats = {};
+            this.meters = {};
         }
     }
 
@@ -89,7 +94,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             success: true,
             error: null,
             initState: null,
-            chatState: {stats: this.stats},
+            chatState: {stats: this.stats, meters: this.meters},
         };
     }
 
@@ -121,6 +126,11 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         if (Object.values(this.stats).length == 0) {
             console.log('Generate stats');
             await generateStats(this);
+        }
+
+        if (Object.values(this.meters).length == 0) {
+            console.log('Generate meters');
+            await generateMeters(this);
         }
 
         if (finalContent) {
@@ -166,7 +176,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             modifiedMessage: finalContent,
             systemMessage: null,
             error: errorMessage,
-            chatState: {stats: this.stats},
+            chatState: {stats: this.stats, meters: this.meters},
         };
     }
 
@@ -220,7 +230,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
                         `${userState.inventory.length > 0 ? userState.inventory.map(item => item.print()).join(' ') : ' '}\n`;
                 }).join('\n') +
                 '```',
-            chatState: {stats: this.stats}
+            chatState: {stats: this.stats, meters: this.meters}
         };
     }
 

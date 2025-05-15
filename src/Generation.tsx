@@ -89,6 +89,67 @@ export async function generateStats(stage: Stage) {
 }
 
 
+function buildMeterPrompt(stage: Stage): string {
+    const baseUser = Object.values(stage.users)[0];
+    const baseCharacter = Object.values(stage.characters)[0];
+    return (
+        buildSection('FLAVOR TEXT', stage.replaceTags((baseCharacter.personality + ' ' + baseCharacter.description + '\n' + baseCharacter.scenario), {user: baseUser.name, char: baseCharacter.name})) +
+        buildSection('Stats', Object.values(stage.stats).map(stat => `${stat.name} - ${stat.description}`).join('\n')) +
+        buildSection('Example Response', '\n' +
+            `Health - 100/100 - Physical condition; a cut or scrape may be one point, while a mortal wound can be fifty or more.\n` +
+            `Magic - 100/100 - Mana pool. Used when casting spells; a simple trick costs a single point, but massive spells may cost fifty or more.\n`) +
+        buildSection('Example Response', '\n' +
+            `Body - 10/10 - Physical endurance remaining. Minor efforts or injury deduct a point while strenuous efforts or major wounds may deduct more.\n` +
+            `Mind - 10/10 - Mental stress remaining. Minor stressors or scares may deduct a point while moments of critical terror or crisis may deduct more.\n`) +
+        buildSection('Example Response', '\n' +
+            `Health - 20/20 - Physical resilience. injuries can range from one to ten points, based on severity. \n` +
+            `Mana - 20/20 - Magical resource. Spells cost one to five points, depending on challenge or affinity.\n` +
+            `Stamina - 20/20 - Energy reserve. Actions can cost between one or five points, based on exertion.\n`) +
+        buildSection('Example Response', '\n' +
+            `Condition - 10/10 - Relative physical state. Reduce by taking damage or increased through repair.\n` +
+            `Power - 10/10 - Remaining energy. Used during movement or by firing weapons.\n`) +
+        buildSection('Current Instruction',
+            `You are doing critical prep work for a new roleplaying game. Instead of narrating, you will first use this planning response to review the FLAVOR TEXT and STATS to invent two to four metered resources for a role-playing game. ` +
+            `Use the FLAVOR TEXT as inspirational material as you name, size, and describe a handful of RPG meters that suit the vibe of the setting. ` +
+            `These stats will be applied to other characters beyond those found in the FLAVOR TEXT, so they should suit a spectrum of strengths and activities. ` +
+            `This essential, preparatory response includes two to four lines, each following this format: "Name - start amount/max amount - Brief description of what the meter represents and how actions impact it." ` +
+            `Simply define these meters and promptly end your response.\n`) +
+        '### FUTURE INSTRUCTION:');
+}
+
+export async function generateMeters(stage: Stage) {
+
+    const statRegex =   /^(?:\d+\.\s*)?\s*([\w\s-]+?)(?:[-:]\s)(.+)$/gm
+    let tries = 3;
+    while (Object.values(stage.meters).length < 2 && tries > 0) {
+        let textResponse = await stage.generator.textGen({
+            prompt: buildStatPrompt(stage),
+            max_tokens: 300,
+            min_tokens: 100
+        });
+        if (textResponse && textResponse.result) {
+            stage.meters = {};
+            let statMatch = null;
+            while ((statMatch = statRegex.exec(textResponse.result)) !== null) {
+                if (statMatch[1] && statMatch[2]) {
+                    stage.meters[statMatch[1].trim()] = new Stat(statMatch[1].trim(), statMatch[2].trim());
+                }
+            }
+        }
+        
+        tries--;
+    }
+
+    if (Object.values(stage.meters).length < 2) {
+        stage.meters = {};
+        console.log(`Failed to generate meters.`);
+    } else {
+        console.log(`Generated meters:`);
+        console.log(stage.meters);    
+    }
+}
+
+
 function buildSampleStatBlocks(stage: Stage) {
     const id = Object.keys(stage.users)[0];
     let userState = stage.getUserState(id);
@@ -184,7 +245,7 @@ export async function generateStatBlock(stage: Stage) {
                     } else {
                         break;
                     }
-                } else if (line.includes(" - Health: ")) {
+                } else if (line.includes(" - Level  ")) {
                     statBlocks.push(line);
                 } else if (statBlocks.length > 0) {
                     statBlocks[statBlocks.length - 1] = statBlocks[statBlocks.length - 1] + '\n' + line;
@@ -194,19 +255,33 @@ export async function generateStatBlock(stage: Stage) {
 
             for (let statBlock of statBlocks) {
                 let success = false;
-                const statBlockPattern = /^(.+?) - Health:\s*(\d+)\/(\d+)\s*(.*)/s;
+                // Captures username, class descriptor, everything after the character & stat lines:
+                const statBlockPattern = /^(.+?) - Level\s*\d+\s*(\w*)\s*\(\d+\/\d+\)\s*\n(.*)/is
+                //const statBlockPattern = /^(.+?) - Health:\s*(\d+)\/(\d+)\s*(.*)/s;
                 const match = statBlock.match(statBlockPattern);
                 console.log(match);
 
-                if (match && match[1] && match[2] && match[3] && match[4]) {
+                if (match && match[1] && match[2] && match[3]) {
                     console.log(`Statblock is complete enough to try processing; looking for ID for ${match[1]}`);
 
                     const anonymizedId = Object.keys(stage.users).find(anonymizedId => stage.users[anonymizedId].name.toLowerCase().trim() == match[1].toLowerCase().trim());
 
                     if (anonymizedId) {
                         const userState: UserState = {...stage.getUserState(anonymizedId ?? '')} as UserState;
-
                         success = true;
+
+                        // Get class?
+                        // userState.class = match[2].trim();
+                        
+                        /*
+                        Name - Level 5 Unknown (3/5)
+                        gfds df | fdsa | fdsa |
+                        Meter x/y | Meter a/b
+                        Item (stat +x) Effect (stat -y)
+                        */
+
+                        
+
                         userState.health = parseInt(match[2]);
                         userState.maxHealth = parseInt(match[3]);
                         // Clean up inventory:
@@ -275,7 +350,7 @@ export async function determineStatAndDifficulty(stage: Stage) {
                 buildSection('Sample Output', `None: ${stage.users[stage.lastSpeaker].name} is simply answering a question honestly here; there is no risk or effort to associate to this course of action.`) +
                 buildSection('Current Instruction', `Consider ${stage.users[stage.lastSpeaker].name}'s last input:\n"${stage.history[stage.history.length - 1]}"\n` +
                     `Use this preparatory response to evaluate whether the actions or dialog presented in this input could require a skill check governed by one of the STATS above. ` +
-                    `Begin this response by outputting the most relevant STAT and a DIFFICULTY MODIFIER between -4 and +1. ` +
+                    `Begin this response by outputting the most relevant STAT and a DIFFICULTY MODIFIER between -4 and +1, taking care to tacitly consider the context of the CHAT HISTORY. ` +
                     `The DIFFICULTY MODIFIER should be based upon the apparent challenge or risk of the task being attempted and not upon ${stage.users[stage.lastSpeaker].name}'s personal advantages or disadvantages (those will be factored in later). ` +
                     `If the input does not present any challenge, risk, or significant action, simply output "None."`
                 ) +
