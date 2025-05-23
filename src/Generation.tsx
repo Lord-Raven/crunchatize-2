@@ -124,7 +124,7 @@ export async function generateMeters(stage: Stage) {
     let tries = 3;
     while (Object.values(stage.meters).length < 2 && tries > 0) {
         let textResponse = await stage.generator.textGen({
-            prompt: buildStatPrompt(stage),
+            prompt: buildMeterPrompt(stage),
             max_tokens: 300,
             min_tokens: 100
         });

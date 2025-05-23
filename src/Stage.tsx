@@ -128,10 +128,10 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             await generateStats(this);
         }
 
-        if (Object.values(this.meters).length == 0) {
+//        if (Object.values(this.meters).length == 0) {
             console.log('Generate meters');
             await generateMeters(this);
-        }
+//        }
 
         if (finalContent) {
             const match = await determineStatAndDifficulty(this);
