@@ -88,7 +88,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
 
     async load(): Promise<Partial<LoadResponse<InitStateType, ChatStateType, MessageStateType>>> {
 
-        console.log('Finished loading stage.');
+        console.log('Finished loading Crunchatize 2.');
 
         return {
             success: true,
@@ -99,7 +99,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
     }
 
     async setState(state: MessageStateType): Promise<void> {
-        console.log('setState()');
+        console.log('setState() with:');
         console.log(state);
         this.loadMessageState(state);
     }
@@ -120,7 +120,6 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         if (this.history.length > 10) {
             this.history.slice(this.history.length - 10);
         }
-        console.log(this.history);
         this.lastSpeaker = anonymizedId;
 
         if (Object.values(this.stats).length == 0) {
