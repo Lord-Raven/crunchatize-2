@@ -10,7 +10,7 @@ tagline: "This time, it's personalized."
 creator_notes: "It's like the first one, but with a '2' at the end."
 
 # 'PUBLIC', 'PRIVATE', or 'UNLISTED'.
-visibility: 'UNLISTED'
+visibility: 'PRIVATE'
 
 # 'ADJACENT' | 'NONE' | 'COVER' | 'FULLSCREEN'
 # 'ADJACENT' is default. The frame will display on the side of the
