@@ -10,7 +10,7 @@ tagline: "This time, it's personalized."
 creator_notes: "Please don't play this yet. It's just temporarily public so I can check something; it's not ready to play."
 
 # 'PUBLIC', 'PRIVATE', or 'UNLISTED'.
-visibility: 'PUBLIC'
+visibility: 'PRIVATE'
 
 # 'ADJACENT' | 'NONE' | 'COVER' | 'FULLSCREEN'
 # 'ADJACENT' is default. The frame will display on the side of the
