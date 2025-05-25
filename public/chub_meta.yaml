@@ -7,7 +7,7 @@ project_name: "Crunchatize 2"
 # A short tagline to show in search.
 tagline: "This time, it's personalized."
 
-creator_notes: ""
+creator_notes: "It's like the first one, but with a '2' at the end."
 
 # 'PUBLIC', 'PRIVATE', or 'UNLISTED'.
 visibility: 'PRIVATE'
