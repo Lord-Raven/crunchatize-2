@@ -117,6 +117,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
         let userState = this.getUserState(anonymizedId);
 
         this.history.push(`### Input ${this.users[anonymizedId].name}: ${content}`);
+        // Just saving ten-message history per node; ideally, we drop this for include_history once it's reliable.
         if (this.history.length > 10) {
             this.history.slice(this.history.length - 10);
         }
