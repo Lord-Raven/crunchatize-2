@@ -107,13 +107,13 @@ function buildMeterPrompt(stage: Stage): string {
             `Stamina - 20/20 - Energy reserve. Actions can cost between one or five points, based on exertion.\n`) +
         buildSection('Example Response', '\n' +
             `Condition - 10/10 - Relative physical state. Reduce by taking damage or increased through repair.\n` +
-            `Power - 10/10 - Remaining energy. Used during movement or by firing weapons.\n`) +
+            `Power - 100/100 - Remaining energy. Used during movement or by firing weapons.\n`) +
         buildSection('Current Instruction',
-            `You are doing critical prep work for a new roleplaying game. Instead of narrating, you will first use this planning response to review the FLAVOR TEXT and STATS to invent two to four metered resources for a role-playing game. ` +
+            `You are doing critical prep work for a new roleplaying game. Instead of narrating, you will first use this planning response to review the FLAVOR TEXT and STATS to invent two to five metered resources for a role-playing game. ` +
             `Use the FLAVOR TEXT as inspirational material as you name, scope, and describe a handful of RPG meters that suit the vibe of the setting. ` +
-            `These meters are distinct from STATS; they represent different resource pools or abstract "currencies" that are spent or restored by various actions or events. ` +
-            `These meters will be applied to other characters beyond those found in the FLAVOR TEXT, so they should suit a spectrum of strengths and activities that suit the setting described therein. ` +
-            `This essential, preparatory response includes two to four lines, each following this format: "Name - start amount/max amount - Brief description of what the meter represents and how actions impact it." ` +
+            `These meters are distinct from STATS; they represent different resource pools or abstract "currencies" that are spent or restored by various actions or events: most commonly, "health" or "energy" pools. ` +
+            `These meters will be applied to other characters beyond those found in the FLAVOR TEXT, so they should suit a spectrum of strengths and activities that suit the apparent setting or style. ` +
+            `This essential, preparatory response includes two to five lines, each following this format:\n"Name - start amount/max amount - Brief description of what the meter represents and how actions impact it."\n` +
             `Simply define these meters and promptly end your response.\n`) +
         '### FUTURE INSTRUCTION:');
 }
