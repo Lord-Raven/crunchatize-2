@@ -110,7 +110,7 @@ export class Stage extends StageBase<InitStateType, ChatStateType, MessageStateT
             content,
             promptForId
         } = userMessage;
-        console.log('beforePrompt()');
+        console.log('beforePrompt() start');
 
         let errorMessage: string|null = null;
         let takenAction: Action|null = null;
