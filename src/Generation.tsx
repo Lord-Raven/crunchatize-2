@@ -111,8 +111,8 @@ function buildMeterPrompt(stage: Stage): string {
         buildSection('Current Instruction',
             `You are doing critical prep work for a new roleplaying game. Instead of narrating, you will first use this planning response to review the FLAVOR TEXT and STATS to invent two to five metered resources for a role-playing game. ` +
             `Use the FLAVOR TEXT as inspirational material as you name, scope, and describe a handful of RPG meters that suit the vibe of the setting. ` +
-            `These meters are distinct from STATS; they represent different resource pools or abstract "currencies" that are spent or restored by various actions or events. Consider including common options like "health" or "energy," as ` +
-            `these resources apply to most roleplaying games. ` +
+            `These meters are functionally distinct from STATS; they represent resource pools or abstract "currencies" that are spent or restored by various actions or events. Include common options like "health" or "energy," as ` +
+            `these resources apply to most roleplaying games--but consider a thematic twist on their naming. ` +
             `These meters will be applied to other characters beyond those found in the FLAVOR TEXT, so they should suit a spectrum of strengths and activities that suit the apparent setting or style. ` +
             `This essential, preparatory response includes two to five lines, each following this format:\n"Name - start amount/max amount - Brief description of what the meter represents and how actions impact it."\n` +
             `Simply define these meters and promptly end your response.\n`) +
