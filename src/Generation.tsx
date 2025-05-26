@@ -120,8 +120,9 @@ function buildMeterPrompt(stage: Stage): string {
 
 export async function generateMeters(stage: Stage) {
 
-    const statRegex =   /^(?:\d+\.\s*)?\s*([\w\s-]+?)(?:[-:]\s)(.+)$/gm
+    const statRegex = /^(?:\d+\.\s*)?\s*([\w\s-]+?)(?:[-:]\s)(.+)$/gm
     let tries = 3;
+    stage.meters = {};
     while (Object.values(stage.meters).length < 2 && tries > 0) {
         let textResponse = await stage.generator.textGen({
             prompt: buildMeterPrompt(stage),
@@ -188,7 +189,7 @@ export function buildResponsePrompt(stage: Stage, anonymizedId: string, outcome:
     const userState = stage.getUserState(anonymizedId);
     const relevantInventory = userState.inventory.filter(item => item.stat && item.stat == outcome.action.stat?.name);
     const inventoryString = relevantInventory.length > 0 ? `${stage.users[anonymizedId].name} has the following relevant item(s) or status effect(s) that could be incorporated into this moment: ${relevantInventory.map(item => item.print()).join(', ')}.` : `${stage.users[anonymizedId].name} does not have any particularly relevant items or status effects to consider in this situation.`;
-    return buildSection('Current Instruction', `${stage.users[anonymizedId].name} has chosen the following action:\n${outcome.action}\n${ResultDescription[outcome.result]}\n${inventoryString}\n`);
+    return buildSection('Current Instruction', `${stage.users[anonymizedId].name} has chosen the following action:\n${outcome.action.description}\n${ResultDescription[outcome.result]}\n${inventoryString}\n`);
 };
 
 
