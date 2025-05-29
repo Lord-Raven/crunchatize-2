@@ -126,7 +126,8 @@ export async function generateMeters(stage: Stage) {
     stage.meters = {};
     while (Object.values(stage.meters).length < 2 && tries > 0) {
         let textResponse = await stage.generator.textGen({
-            prompt: buildMeterPrompt(stage),
+            //prompt: buildMeterPrompt(stage),
+            template: buildMeterPrompt(stage),
             max_tokens: 300,
             min_tokens: 100
         });
@@ -228,7 +229,7 @@ export async function generateStatBlock(stage: Stage) {
     while (!someSuccess && tries > 0) {
         let textResponse = await stage.generator.textGen({
             prompt: buildStatBlockPrompt(stage, stage.lastSpeaker),
-
+            template: "{{message_history}}\n\n{{prompt}}\n",
             max_tokens: 100 + (200 * Object.keys(stage.users).length),
             min_tokens: 50
         });
